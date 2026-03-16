@@ -14,17 +14,17 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     private final PaymentJpaRepository paymentJpaRepository;
 
     @Override
-    public Optional<Payment> findById(Long id) {
-        return paymentJpaRepository.findById(id);
-    }
-
-    @Override
     public Payment save(Payment payment) {
         return paymentJpaRepository.save(payment);
     }
 
     @Override
-    public List<Payment> findAllByMemberId(Long memberId) {
-        return paymentJpaRepository.findAllByMemberId(memberId);
+    public Optional<Payment> findById(Long id) {
+        return paymentJpaRepository.findById(id);
+    }
+
+    @Override
+    public List<Payment> findAll() {
+        return paymentJpaRepository.findAll();
     }
 }

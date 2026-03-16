@@ -6,9 +6,11 @@ import java.util.Optional;
 
 public interface AttendanceRepository {
 
-    Optional<Attendance> findById(Long id);
-
     Attendance save(Attendance attendance);
 
-    List<Attendance> findAllByScheduleId(Long scheduleId);
+    Optional<Attendance> findById(Long id);
+
+    List<Attendance> findAll();
+
+    boolean existsByBookingId(Long bookingId);
 }

@@ -5,7 +5,9 @@ import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.member.domain.repository.MemberRepository;
 import com.lessonring.api.membership.api.request.MembershipCreateRequest;
 import com.lessonring.api.membership.domain.Membership;
+import com.lessonring.api.membership.domain.MembershipStatus;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,17 +42,30 @@ public class MembershipService {
         return membershipRepository.save(membership);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Membership get(Long id) {
-        return membershipRepository.findById(id)
+        Membership membership = membershipRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        refreshStatus(membership);
+        return membership;
     }
 
-    @Transactional(readOnly = true)
-    public List<Membership> getByMemberId(Long memberId) {
+    @Transactional
+    public List<Membership> getAllByMemberId(Long memberId) {
         memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        return membershipRepository.findAllByMemberId(memberId);
+        List<Membership> memberships = membershipRepository.findAllByMemberId(memberId);
+        memberships.forEach(this::refreshStatus);
+        return memberships;
+    }
+
+    private void refreshStatus(Membership membership) {
+        LocalDate today = LocalDate.now();
+
+        if (membership.getStatus() == MembershipStatus.ACTIVE && membership.isExpired(today)) {
+            membership.markExpired();
+        }
     }
 }

@@ -12,5 +12,5 @@ public interface BookingRepository {
 
     List<Booking> findAll();
 
-    boolean existsByMemberIdAndScheduleId(Long memberId, Long scheduleId);
+    boolean existsActiveBooking(Long memberId, Long scheduleId);
 }

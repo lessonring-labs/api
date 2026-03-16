@@ -85,4 +85,8 @@ public class Booking extends BaseEntity {
         this.canceledAt = LocalDateTime.now();
         this.cancelReason = cancelReason;
     }
+
+    public void attend() {
+        this.status = BookingStatus.ATTENDED;
+    }
 }

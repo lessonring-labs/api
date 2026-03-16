@@ -1,6 +1,7 @@
 package com.lessonring.api.booking.infrastructure.persistence;
 
 import com.lessonring.api.booking.domain.Booking;
+import com.lessonring.api.booking.domain.BookingStatus;
 import com.lessonring.api.booking.domain.repository.BookingRepository;
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +30,11 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public boolean existsByMemberIdAndScheduleId(Long memberId, Long scheduleId) {
-        return bookingJpaRepository.existsByMemberIdAndScheduleId(memberId, scheduleId);
+    public boolean existsActiveBooking(Long memberId, Long scheduleId) {
+        return bookingJpaRepository.existsByMemberIdAndScheduleIdAndStatusNot(
+                memberId,
+                scheduleId,
+                BookingStatus.CANCELED
+        );
     }
 }

@@ -2,9 +2,13 @@ package com.lessonring.api.booking.application;
 
 import com.lessonring.api.booking.api.request.BookingCreateRequest;
 import com.lessonring.api.booking.domain.Booking;
+import com.lessonring.api.booking.domain.BookingStatus;
+import com.lessonring.api.booking.domain.event.BookingCanceledEvent;
+import com.lessonring.api.booking.domain.event.BookingCreatedEvent;
 import com.lessonring.api.booking.domain.repository.BookingRepository;
 import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.common.error.ErrorCode;
+import com.lessonring.api.common.event.DomainEventPublisher;
 import com.lessonring.api.member.domain.repository.MemberRepository;
 import com.lessonring.api.membership.domain.Membership;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
@@ -25,9 +29,10 @@ public class BookingService {
     private final MemberRepository memberRepository;
     private final ScheduleRepository scheduleRepository;
     private final MembershipRepository membershipRepository;
+    private final DomainEventPublisher domainEventPublisher;
 
     @Transactional
-    public Booking create(BookingCreateRequest request) {
+    public Booking createWithLock(BookingCreateRequest request) {
         memberRepository.findById(request.getMemberId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
@@ -65,12 +70,14 @@ public class BookingService {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
-        if (bookingRepository.existsByMemberIdAndScheduleId(
+        if (bookingRepository.existsActiveBooking(
                 request.getMemberId(),
                 request.getScheduleId()
         )) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
+
+        schedule.increaseBookedCount();
 
         Booking booking = Booking.create(
                 request.getStudioId(),
@@ -79,7 +86,19 @@ public class BookingService {
                 request.getMembershipId()
         );
 
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        domainEventPublisher.publish(
+                new BookingCreatedEvent(
+                        savedBooking.getId(),
+                        savedBooking.getStudioId(),
+                        savedBooking.getMemberId(),
+                        savedBooking.getScheduleId(),
+                        savedBooking.getMembershipId()
+                )
+        );
+
+        return savedBooking;
     }
 
     @Transactional(readOnly = true)
@@ -94,12 +113,38 @@ public class BookingService {
     }
 
     @Transactional
-    public Booking cancel(Long id) {
+    public Booking cancelWithLock(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
+        if (booking.getStatus() == BookingStatus.CANCELED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Schedule schedule = scheduleRepository.findById(booking.getScheduleId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
         booking.cancel("user canceled");
+        schedule.decreaseBookedCount();
+
+        domainEventPublisher.publish(
+                new BookingCanceledEvent(
+                        booking.getId(),
+                        booking.getStudioId(),
+                        booking.getMemberId(),
+                        booking.getScheduleId(),
+                        booking.getMembershipId(),
+                        booking.getCancelReason()
+                )
+        );
 
         return booking;
+    }
+
+    @Transactional(readOnly = true)
+    public Long getScheduleIdForLock(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+        return booking.getScheduleId();
     }
 }

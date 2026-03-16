@@ -1,6 +1,8 @@
 package com.lessonring.api.schedule.domain;
 
 import com.lessonring.api.common.entity.BaseEntity;
+import com.lessonring.api.common.error.BusinessException;
+import com.lessonring.api.common.error.ErrorCode;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -88,5 +90,18 @@ public class Schedule extends BaseEntity {
                 0,
                 ScheduleStatus.OPEN
         );
+    }
+
+    public void increaseBookedCount() {
+        if (this.bookedCount >= this.capacity) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        this.bookedCount += 1;
+    }
+
+    public void decreaseBookedCount() {
+        if (this.bookedCount > 0) {
+            this.bookedCount -= 1;
+        }
     }
 }

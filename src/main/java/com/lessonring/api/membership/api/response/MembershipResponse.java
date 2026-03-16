@@ -2,6 +2,7 @@ package com.lessonring.api.membership.api.response;
 
 import com.lessonring.api.membership.domain.Membership;
 import com.lessonring.api.membership.domain.MembershipStatus;
+import com.lessonring.api.membership.domain.MembershipType;
 import java.time.LocalDate;
 import lombok.Getter;
 
@@ -12,7 +13,7 @@ public class MembershipResponse {
     private final Long studioId;
     private final Long memberId;
     private final String name;
-    private final String type;
+    private final MembershipType type;
     private final Integer totalCount;
     private final Integer remainingCount;
     private final LocalDate startDate;

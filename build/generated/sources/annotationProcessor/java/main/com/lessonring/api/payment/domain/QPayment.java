@@ -35,11 +35,23 @@ public class QPayment extends EntityPathBase<Payment> {
 
     public final NumberPath<Long> memberId = createNumber("memberId", Long.class);
 
+    public final DatePath<java.time.LocalDate> membershipEndDate = createDate("membershipEndDate", java.time.LocalDate.class);
+
     public final NumberPath<Long> membershipId = createNumber("membershipId", Long.class);
 
-    public final EnumPath<PaymentMethod> method = createEnum("method", PaymentMethod.class);
+    public final StringPath membershipName = createString("membershipName");
+
+    public final DatePath<java.time.LocalDate> membershipStartDate = createDate("membershipStartDate", java.time.LocalDate.class);
+
+    public final NumberPath<Integer> membershipTotalCount = createNumber("membershipTotalCount", Integer.class);
+
+    public final EnumPath<com.lessonring.api.membership.domain.MembershipType> membershipType = createEnum("membershipType", com.lessonring.api.membership.domain.MembershipType.class);
+
+    public final StringPath orderName = createString("orderName");
 
     public final DateTimePath<java.time.LocalDateTime> paidAt = createDateTime("paidAt", java.time.LocalDateTime.class);
+
+    public final EnumPath<PaymentMethod> paymentMethod = createEnum("paymentMethod", PaymentMethod.class);
 
     public final EnumPath<PaymentStatus> status = createEnum("status", PaymentStatus.class);
 

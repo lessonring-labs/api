@@ -1,5 +1,6 @@
 package com.lessonring.api.membership.api.request;
 
+import com.lessonring.api.membership.domain.MembershipType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -18,8 +19,8 @@ public class MembershipCreateRequest {
     @NotBlank
     private String name;
 
-    @NotBlank
-    private String type;
+    @NotNull
+    private MembershipType type;
 
     @NotNull
     @Positive

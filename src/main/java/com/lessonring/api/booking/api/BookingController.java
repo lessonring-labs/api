@@ -2,6 +2,7 @@ package com.lessonring.api.booking.api;
 
 import com.lessonring.api.booking.api.request.BookingCreateRequest;
 import com.lessonring.api.booking.api.response.BookingResponse;
+import com.lessonring.api.booking.application.BookingLockFacade;
 import com.lessonring.api.booking.application.BookingService;
 import com.lessonring.api.common.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -14,11 +15,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class BookingController {
 
+    private final BookingLockFacade bookingLockFacade;
     private final BookingService bookingService;
 
     @PostMapping
-    public ApiResponse<BookingResponse> create(@Valid @RequestBody BookingCreateRequest request) {
-        return ApiResponse.success(new BookingResponse(bookingService.create(request)));
+    public ApiResponse<BookingResponse> create(@RequestBody @Valid BookingCreateRequest request) {
+        return ApiResponse.success(new BookingResponse(bookingLockFacade.create(request)));
     }
 
     @GetMapping("/{id}")
@@ -28,16 +30,16 @@ public class BookingController {
 
     @GetMapping
     public ApiResponse<List<BookingResponse>> getAll() {
-        List<BookingResponse> responses = bookingService.getAll()
-                .stream()
-                .map(BookingResponse::new)
-                .toList();
-
-        return ApiResponse.success(responses);
+        return ApiResponse.success(
+                bookingService.getAll()
+                        .stream()
+                        .map(BookingResponse::new)
+                        .toList()
+        );
     }
 
     @PatchMapping("/{id}/cancel")
     public ApiResponse<BookingResponse> cancel(@PathVariable Long id) {
-        return ApiResponse.success(new BookingResponse(bookingService.cancel(id)));
+        return ApiResponse.success(new BookingResponse(bookingLockFacade.cancel(id)));
     }
 }

@@ -27,7 +27,7 @@ public class MembershipController {
 
     @GetMapping("/api/v1/members/{memberId}/memberships")
     public ApiResponse<List<MembershipResponse>> getByMemberId(@PathVariable Long memberId) {
-        List<MembershipResponse> responses = membershipService.getByMemberId(memberId)
+        List<MembershipResponse> responses = membershipService.getAllByMemberId(memberId)
                 .stream()
                 .map(MembershipResponse::new)
                 .toList();

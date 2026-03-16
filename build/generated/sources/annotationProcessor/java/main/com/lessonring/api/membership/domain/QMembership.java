@@ -45,7 +45,7 @@ public class QMembership extends EntityPathBase<Membership> {
 
     public final NumberPath<Integer> totalCount = createNumber("totalCount", Integer.class);
 
-    public final StringPath type = createString("type");
+    public final EnumPath<MembershipType> type = createEnum("type", MembershipType.class);
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> updatedAt = _super.updatedAt;

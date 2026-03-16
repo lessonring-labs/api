@@ -1,6 +1,8 @@
 package com.lessonring.api.membership.domain;
 
 import com.lessonring.api.common.entity.BaseEntity;
+import com.lessonring.api.common.error.BusinessException;
+import com.lessonring.api.common.error.ErrorCode;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.AccessLevel;
@@ -17,28 +19,29 @@ public class Membership extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "studio_id", nullable = false)
+    @Column(nullable = false)
     private Long studioId;
 
-    @Column(name = "member_id", nullable = false)
+    @Column(nullable = false)
     private Long memberId;
 
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "type", nullable = false)
-    private String type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MembershipType type;
 
-    @Column(name = "total_count")
+    @Column(nullable = false)
     private Integer totalCount;
 
-    @Column(name = "remaining_count")
+    @Column(nullable = false)
     private Integer remainingCount;
 
-    @Column(name = "start_date", nullable = false)
+    @Column(nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "end_date", nullable = false)
+    @Column(nullable = false)
     private LocalDate endDate;
 
     @Enumerated(EnumType.STRING)
@@ -49,67 +52,139 @@ public class Membership extends BaseEntity {
             Long studioId,
             Long memberId,
             String name,
-            String type,
+            MembershipType type,
             Integer totalCount,
-            Integer remainingCount,
             LocalDate startDate,
-            LocalDate endDate,
-            MembershipStatus status
+            LocalDate endDate
     ) {
         this.studioId = studioId;
         this.memberId = memberId;
         this.name = name;
         this.type = type;
         this.totalCount = totalCount;
-        this.remainingCount = remainingCount;
+        this.remainingCount = totalCount;
         this.startDate = startDate;
         this.endDate = endDate;
-        this.status = status;
+        this.status = MembershipStatus.ACTIVE;
     }
 
     public static Membership create(
             Long studioId,
             Long memberId,
             String name,
-            String type,
+            MembershipType type,
             Integer totalCount,
             LocalDate startDate,
             LocalDate endDate
     ) {
+        if (startDate.isAfter(endDate)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (type == MembershipType.COUNT && (totalCount == null || totalCount <= 0)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         return new Membership(
                 studioId,
                 memberId,
                 name,
                 type,
                 totalCount,
-                totalCount,
                 startDate,
-                endDate,
-                MembershipStatus.ACTIVE
+                endDate
         );
     }
 
-    public void useOnce() {
-        if (remainingCount == null || remainingCount <= 0) {
-            this.status = MembershipStatus.USED_UP;
-            return;
-        }
-
-        this.remainingCount = this.remainingCount - 1;
-
-        if (this.remainingCount <= 0) {
-            this.status = MembershipStatus.USED_UP;
-        }
+    public boolean isExpired(LocalDate today) {
+        return endDate.isBefore(today);
     }
 
-    public void expire() {
-        this.status = MembershipStatus.EXPIRED;
+    public boolean isWithinPeriod(LocalDate today) {
+        return !today.isBefore(startDate) && !today.isAfter(endDate);
     }
 
     public boolean isAvailable() {
-        return this.status == MembershipStatus.ACTIVE
-                && this.remainingCount != null
-                && this.remainingCount > 0
-                && !this.endDate.isBefore(LocalDate.now());
+        return isAvailable(LocalDate.now());
+    }
+
+    public boolean isAvailable(LocalDate today) {
+        if (status != MembershipStatus.ACTIVE) {
+            return false;
+        }
+
+        if (!isWithinPeriod(today)) {
+            return false;
+        }
+
+        if (type == MembershipType.COUNT) {
+            return remainingCount != null && remainingCount > 0;
+        }
+
+        if (type == MembershipType.PERIOD) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public void validateUsable(LocalDate today) {
+        if (isExpired(today)) {
+            markExpired();
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (status == MembershipStatus.SUSPENDED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (status == MembershipStatus.EXPIRED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (status == MembershipStatus.USED_UP) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (!isWithinPeriod(today)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (type == MembershipType.COUNT && (remainingCount == null || remainingCount <= 0)) {
+            this.remainingCount = 0;
+            this.status = MembershipStatus.USED_UP;
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+    }
+
+    public void useOnce(LocalDate today) {
+        validateUsable(today);
+
+        if (type == MembershipType.COUNT) {
+            this.remainingCount -= 1;
+
+            if (this.remainingCount <= 0) {
+                this.remainingCount = 0;
+                this.status = MembershipStatus.USED_UP;
+            }
+        }
+    }
+
+    public void markExpired() {
+        this.status = MembershipStatus.EXPIRED;
+    }
+
+    public void suspend() {
+        if (this.status == MembershipStatus.EXPIRED || this.status == MembershipStatus.USED_UP) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        this.status = MembershipStatus.SUSPENDED;
+    }
+
+    public void activate() {
+        if (this.status == MembershipStatus.EXPIRED || this.status == MembershipStatus.USED_UP) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        this.status = MembershipStatus.ACTIVE;
     }
 }

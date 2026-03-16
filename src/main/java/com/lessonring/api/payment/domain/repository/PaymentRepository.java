@@ -6,9 +6,9 @@ import java.util.Optional;
 
 public interface PaymentRepository {
 
-    Optional<Payment> findById(Long id);
-
     Payment save(Payment payment);
 
-    List<Payment> findAllByMemberId(Long memberId);
+    Optional<Payment> findById(Long id);
+
+    List<Payment> findAll();
 }

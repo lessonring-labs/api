@@ -36,4 +36,32 @@ public class Notification extends BaseEntity {
     private String type;
 
     private LocalDateTime readAt;
+
+    private Notification(
+            Long studioId,
+            Long memberId,
+            String title,
+            String content,
+            String type
+    ) {
+        this.studioId = studioId;
+        this.memberId = memberId;
+        this.title = title;
+        this.content = content;
+        this.type = type;
+    }
+
+    public static Notification create(
+            Long studioId,
+            Long memberId,
+            String title,
+            String content,
+            String type
+    ) {
+        return new Notification(studioId, memberId, title, content, type);
+    }
+
+    public void read() {
+        this.readAt = LocalDateTime.now();
+    }
 }
