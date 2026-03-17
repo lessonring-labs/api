@@ -26,15 +26,4 @@ public class ApiResponse<T> {
     public static ApiResponse<Void> fail(String code, String message) {
         return new ApiResponse<>(false, null, new ErrorResponse(code, message));
     }
-
-    @Getter
-    public static class ErrorResponse {
-        private final String code;
-        private final String message;
-
-        public ErrorResponse(String code, String message) {
-            this.code = code;
-            this.message = message;
-        }
-    }
 }

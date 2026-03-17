@@ -32,4 +32,9 @@ public class AttendanceRepositoryImpl implements AttendanceRepository {
     public boolean existsByBookingId(Long bookingId) {
         return attendanceJpaRepository.existsByBookingId(bookingId);
     }
+
+    @Override
+    public void delete(Attendance attendance) {
+        attendanceJpaRepository.delete(attendance);
+    }
 }

@@ -17,7 +17,7 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping
-    public ApiResponse<AttendanceResponse> create(@Valid @RequestBody AttendanceCreateRequest request) {
+    public ApiResponse<AttendanceResponse> create(@RequestBody @Valid AttendanceCreateRequest request) {
         return ApiResponse.success(new AttendanceResponse(attendanceService.create(request)));
     }
 
@@ -28,11 +28,17 @@ public class AttendanceController {
 
     @GetMapping
     public ApiResponse<List<AttendanceResponse>> getAll() {
-        List<AttendanceResponse> responses = attendanceService.getAll()
-                .stream()
-                .map(AttendanceResponse::new)
-                .toList();
+        return ApiResponse.success(
+                attendanceService.getAll()
+                        .stream()
+                        .map(AttendanceResponse::new)
+                        .toList()
+        );
+    }
 
-        return ApiResponse.success(responses);
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> cancel(@PathVariable Long id) {
+        attendanceService.cancel(id);
+        return ApiResponse.success(null);
     }
 }

@@ -187,4 +187,22 @@ public class Membership extends BaseEntity {
         }
         this.status = MembershipStatus.ACTIVE;
     }
+
+    public void restoreOnce() {
+        if (this.type != MembershipType.COUNT) {
+            return;
+        }
+
+        if (this.remainingCount == null) {
+            this.remainingCount = 0;
+        }
+
+        if (this.remainingCount < this.totalCount) {
+            this.remainingCount += 1;
+        }
+
+        if (this.status == MembershipStatus.USED_UP && this.remainingCount > 0) {
+            this.status = MembershipStatus.ACTIVE;
+        }
+    }
 }

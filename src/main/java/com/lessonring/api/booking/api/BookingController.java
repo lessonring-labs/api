@@ -42,4 +42,14 @@ public class BookingController {
     public ApiResponse<BookingResponse> cancel(@PathVariable Long id) {
         return ApiResponse.success(new BookingResponse(bookingLockFacade.cancel(id)));
     }
+
+    @PatchMapping("/{id}/no-show")
+    public ApiResponse<BookingResponse> markNoShow(@PathVariable Long id) {
+        return ApiResponse.success(new BookingResponse(bookingService.markNoShow(id)));
+    }
+
+    @PatchMapping("/no-show/process")
+    public ApiResponse<Integer> processNoShowBatch() {
+        return ApiResponse.success(bookingService.markNoShowTargets());
+    }
 }

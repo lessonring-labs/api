@@ -1,6 +1,8 @@
 package com.lessonring.api.booking.domain;
 
 import com.lessonring.api.common.entity.BaseEntity;
+import com.lessonring.api.common.error.BusinessException;
+import com.lessonring.api.common.error.ErrorCode;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -17,49 +19,41 @@ public class Booking extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "studio_id", nullable = false)
+    @Column(nullable = false)
     private Long studioId;
 
-    @Column(name = "member_id", nullable = false)
+    @Column(nullable = false)
     private Long memberId;
 
-    @Column(name = "schedule_id", nullable = false)
+    @Column(nullable = false)
     private Long scheduleId;
 
-    @Column(name = "membership_id")
+    @Column(nullable = false)
     private Long membershipId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status;
 
-    @Column(name = "booked_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime bookedAt;
 
-    @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
-    @Column(name = "cancel_reason")
     private String cancelReason;
 
     private Booking(
             Long studioId,
             Long memberId,
             Long scheduleId,
-            Long membershipId,
-            BookingStatus status,
-            LocalDateTime bookedAt,
-            LocalDateTime canceledAt,
-            String cancelReason
+            Long membershipId
     ) {
         this.studioId = studioId;
         this.memberId = memberId;
         this.scheduleId = scheduleId;
         this.membershipId = membershipId;
-        this.status = status;
-        this.bookedAt = bookedAt;
-        this.canceledAt = canceledAt;
-        this.cancelReason = cancelReason;
+        this.status = BookingStatus.RESERVED;
+        this.bookedAt = LocalDateTime.now();
     }
 
     public static Booking create(
@@ -68,25 +62,36 @@ public class Booking extends BaseEntity {
             Long scheduleId,
             Long membershipId
     ) {
-        return new Booking(
-                studioId,
-                memberId,
-                scheduleId,
-                membershipId,
-                BookingStatus.RESERVED,
-                LocalDateTime.now(),
-                null,
-                null
-        );
+        return new Booking(studioId, memberId, scheduleId, membershipId);
     }
 
-    public void cancel(String cancelReason) {
+    public void cancel(String reason) {
+        if (this.status != BookingStatus.RESERVED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
         this.status = BookingStatus.CANCELED;
         this.canceledAt = LocalDateTime.now();
-        this.cancelReason = cancelReason;
+        this.cancelReason = reason;
     }
 
     public void attend() {
+        if (this.status != BookingStatus.RESERVED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
         this.status = BookingStatus.ATTENDED;
+    }
+
+    public void markNoShow() {
+        if (this.status != BookingStatus.RESERVED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        this.status = BookingStatus.NO_SHOW;
+    }
+
+    public void revertToReserved() {
+        if (this.status != BookingStatus.ATTENDED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        this.status = BookingStatus.RESERVED;
     }
 }

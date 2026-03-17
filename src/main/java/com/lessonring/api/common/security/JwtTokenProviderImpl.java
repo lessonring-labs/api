@@ -2,7 +2,10 @@ package com.lessonring.api.common.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
@@ -12,18 +15,20 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtTokenProviderImpl implements JwtTokenProvider {
 
-    private final SecretKey secretKey;
-    private final long accessTokenExpiration;
-    private final long refreshTokenExpiration;
+    @Value("${jwt.secret}")
+    private String secret;
 
-    public JwtTokenProviderImpl(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
-            @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration
-    ) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.accessTokenExpiration = accessTokenExpiration;
-        this.refreshTokenExpiration = refreshTokenExpiration;
+    @Value("${jwt.access-token-expiration}")
+    private long accessTokenExpiration;
+
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
+
+    private SecretKey secretKey;
+
+    @PostConstruct
+    public void init() {
+        this.secretKey = createSecretKey(secret);
     }
 
     @Override
@@ -37,12 +42,6 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
     }
 
     @Override
-    public Long getUserId(String token) {
-        Claims claims = parseClaims(token);
-        return Long.valueOf(claims.getSubject());
-    }
-
-    @Override
     public boolean validateToken(String token) {
         try {
             parseClaims(token);
@@ -50,6 +49,17 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    @Override
+    public Long getUserId(String token) {
+        Claims claims = parseClaims(token);
+        return Long.valueOf(claims.getSubject());
+    }
+
+    @Override
+    public long getAccessTokenExpiration() {
+        return accessTokenExpiration;
     }
 
     @Override
@@ -75,5 +85,17 @@ public class JwtTokenProviderImpl implements JwtTokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private SecretKey createSecretKey(String secret) {
+        try {
+            return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        } catch (DecodingException | IllegalArgumentException e) {
+            try {
+                return Keys.hmacShaKeyFor(Decoders.BASE64URL.decode(secret));
+            } catch (DecodingException | IllegalArgumentException ignored) {
+                return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+            }
+        }
     }
 }

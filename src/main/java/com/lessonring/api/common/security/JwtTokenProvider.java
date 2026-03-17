@@ -6,9 +6,11 @@ public interface JwtTokenProvider {
 
     String createRefreshToken(Long userId);
 
+    boolean validateToken(String token);
+
     Long getUserId(String token);
 
-    boolean validateToken(String token);
+    long getAccessTokenExpiration();
 
     long getRefreshTokenExpiration();
 }

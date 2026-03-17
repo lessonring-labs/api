@@ -1,6 +1,7 @@
 package com.lessonring.api.booking.domain.repository;
 
 import com.lessonring.api.booking.domain.Booking;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +14,6 @@ public interface BookingRepository {
     List<Booking> findAll();
 
     boolean existsActiveBooking(Long memberId, Long scheduleId);
+
+    List<Booking> findNoShowTargets(LocalDateTime now);
 }

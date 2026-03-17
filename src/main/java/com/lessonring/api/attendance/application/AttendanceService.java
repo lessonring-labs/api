@@ -11,6 +11,7 @@ import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.common.event.DomainEventPublisher;
 import com.lessonring.api.membership.domain.Membership;
+import com.lessonring.api.membership.domain.MembershipType;
 import com.lessonring.api.membership.domain.event.MembershipUsedEvent;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import java.time.LocalDate;
@@ -38,6 +39,10 @@ public class AttendanceService {
         }
 
         if (booking.getStatus() == BookingStatus.ATTENDED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (booking.getStatus() == BookingStatus.NO_SHOW) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
@@ -82,5 +87,29 @@ public class AttendanceService {
     @Transactional(readOnly = true)
     public List<Attendance> getAll() {
         return attendanceRepository.findAll();
+    }
+
+    @Transactional
+    public void cancel(Long attendanceId) {
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        Booking booking = bookingRepository.findById(attendance.getBookingId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (booking.getStatus() != BookingStatus.ATTENDED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Membership membership = membershipRepository.findById(booking.getMembershipId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        booking.revertToReserved();
+
+        if (membership.getType() == MembershipType.COUNT) {
+            membership.restoreOnce();
+        }
+
+        attendanceRepository.delete(attendance);
     }
 }

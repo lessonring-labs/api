@@ -3,6 +3,8 @@ package com.lessonring.api.booking.infrastructure.persistence;
 import com.lessonring.api.booking.domain.Booking;
 import com.lessonring.api.booking.domain.BookingStatus;
 import com.lessonring.api.booking.domain.repository.BookingRepository;
+import com.lessonring.api.booking.infrastructure.query.BookingQueryRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Repository;
 public class BookingRepositoryImpl implements BookingRepository {
 
     private final BookingJpaRepository bookingJpaRepository;
+    private final BookingQueryRepository bookingQueryRepository;
 
     @Override
     public Booking save(Booking booking) {
@@ -36,5 +39,10 @@ public class BookingRepositoryImpl implements BookingRepository {
                 scheduleId,
                 BookingStatus.CANCELED
         );
+    }
+
+    @Override
+    public List<Booking> findNoShowTargets(LocalDateTime now) {
+        return bookingQueryRepository.findNoShowTargets(now);
     }
 }

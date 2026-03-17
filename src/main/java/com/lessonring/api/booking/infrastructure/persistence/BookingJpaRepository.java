@@ -6,9 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingJpaRepository extends JpaRepository<Booking, Long> {
 
-    boolean existsByMemberIdAndScheduleIdAndStatusNot(
-            Long memberId,
-            Long scheduleId,
-            BookingStatus status
-    );
+    boolean existsByMemberIdAndScheduleIdAndStatusNot(Long memberId, Long scheduleId, BookingStatus status);
 }

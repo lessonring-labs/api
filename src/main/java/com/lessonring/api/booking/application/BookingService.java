@@ -1,5 +1,6 @@
 package com.lessonring.api.booking.application;
 
+import com.lessonring.api.attendance.domain.repository.AttendanceRepository;
 import com.lessonring.api.booking.api.request.BookingCreateRequest;
 import com.lessonring.api.booking.domain.Booking;
 import com.lessonring.api.booking.domain.BookingStatus;
@@ -11,10 +12,14 @@ import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.common.event.DomainEventPublisher;
 import com.lessonring.api.member.domain.repository.MemberRepository;
 import com.lessonring.api.membership.domain.Membership;
+import com.lessonring.api.membership.domain.MembershipType;
+import com.lessonring.api.membership.domain.event.MembershipUsedEvent;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.schedule.domain.Schedule;
 import com.lessonring.api.schedule.domain.ScheduleStatus;
 import com.lessonring.api.schedule.domain.repository.ScheduleRepository;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +34,8 @@ public class BookingService {
     private final MemberRepository memberRepository;
     private final ScheduleRepository scheduleRepository;
     private final MembershipRepository membershipRepository;
+    private final AttendanceRepository attendanceRepository;
+
     private final DomainEventPublisher domainEventPublisher;
 
     @Transactional
@@ -146,5 +153,63 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
         return booking.getScheduleId();
+    }
+
+    @Transactional
+    public Booking markNoShow(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (booking.getStatus() != BookingStatus.RESERVED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (attendanceRepository.existsByBookingId(bookingId)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Schedule schedule = scheduleRepository.findById(booking.getScheduleId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (schedule.getEndAt().isAfter(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Membership membership = membershipRepository.findById(booking.getMembershipId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        booking.markNoShow();
+
+        if (membership.getType() == MembershipType.COUNT) {
+            membership.useOnce(LocalDate.now());
+
+            domainEventPublisher.publish(
+                    new MembershipUsedEvent(
+                            membership.getId(),
+                            membership.getStudioId(),
+                            membership.getMemberId(),
+                            membership.getRemainingCount()
+                    )
+            );
+        }
+
+        return booking;
+    }
+
+    @Transactional
+    public int markNoShowTargets() {
+        List<Booking> targets = bookingRepository.findNoShowTargets(LocalDateTime.now());
+        int processedCount = 0;
+
+        for (Booking booking : targets) {
+            try {
+                markNoShow(booking.getId());
+                processedCount++;
+            } catch (Exception e) {
+                // 1차 구현에서는 개별 실패가 전체 배치를 중단시키지 않도록 계속 진행
+            }
+        }
+
+        return processedCount;
     }
 }

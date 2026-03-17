@@ -13,4 +13,6 @@ public interface AttendanceRepository {
     List<Attendance> findAll();
 
     boolean existsByBookingId(Long bookingId);
+
+    void delete(Attendance attendance);
 }
