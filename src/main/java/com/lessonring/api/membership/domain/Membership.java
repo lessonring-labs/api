@@ -220,4 +220,8 @@ public class Membership extends BaseEntity {
         }
         this.status = MembershipStatus.REFUNDED;
     }
+
+    public boolean isRefunded() {
+        return this.status == MembershipStatus.REFUNDED;
+    }
 }
