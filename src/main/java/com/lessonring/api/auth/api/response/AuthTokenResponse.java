@@ -7,10 +7,16 @@ import lombok.Getter;
 @Schema(description = "인증 토큰 응답")
 public class AuthTokenResponse {
 
-    @Schema(description = "Access Token", example = "eyJhbGciOiJIUzI1NiJ9...")
+    @Schema(
+            description = "Access Token",
+            example = "eyJhbGciOiJIUzI1NiJ9..."
+    )
     private final String accessToken;
 
-    @Schema(description = "Refresh Token", example = "eyJhbGciOiJIUzI1NiJ9...")
+    @Schema(
+            description = "Refresh Token",
+            example = "eyJhbGciOiJIUzI1NiJ9..."
+    )
     private final String refreshToken;
 
     public AuthTokenResponse(String accessToken, String refreshToken) {

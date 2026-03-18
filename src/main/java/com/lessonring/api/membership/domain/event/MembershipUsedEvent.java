@@ -17,7 +17,7 @@ public class MembershipUsedEvent extends DomainEvent {
             Long memberId,
             Integer remainingCount
     ) {
-        super();
+        super(membershipId, "MEMBERSHIP_USED");
         this.membershipId = membershipId;
         this.studioId = studioId;
         this.memberId = memberId;

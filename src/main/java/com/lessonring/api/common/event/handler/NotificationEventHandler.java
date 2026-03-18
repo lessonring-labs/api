@@ -5,6 +5,7 @@ import com.lessonring.api.booking.domain.event.BookingCreatedEvent;
 import com.lessonring.api.membership.domain.event.MembershipUsedEvent;
 import com.lessonring.api.notification.domain.Notification;
 import com.lessonring.api.notification.domain.repository.NotificationRepository;
+import com.lessonring.api.payment.domain.event.PaymentCanceledEvent;
 import com.lessonring.api.payment.domain.event.PaymentCompletedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
@@ -51,6 +52,19 @@ public class NotificationEventHandler {
                         "결제 완료",
                         "결제가 완료되었습니다. paymentId=" + event.getPaymentId(),
                         "PAYMENT_COMPLETED"
+                )
+        );
+    }
+
+    @EventListener
+    public void handle(PaymentCanceledEvent event) {
+        notificationRepository.save(
+                Notification.create(
+                        event.getStudioId(),
+                        event.getMemberId(),
+                        "결제 환불 완료",
+                        "결제가 환불되었습니다. paymentId=" + event.getPaymentId(),
+                        "PAYMENT_CANCELED"
                 )
         );
     }

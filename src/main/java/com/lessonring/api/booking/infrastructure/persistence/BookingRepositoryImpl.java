@@ -45,4 +45,9 @@ public class BookingRepositoryImpl implements BookingRepository {
     public List<Booking> findNoShowTargets(LocalDateTime now) {
         return bookingQueryRepository.findNoShowTargets(now);
     }
+
+    @Override
+    public List<Booking> findRefundTargetBookings(Long membershipId, LocalDateTime now) {
+        return bookingQueryRepository.findRefundTargetBookings(membershipId, now);
+    }
 }

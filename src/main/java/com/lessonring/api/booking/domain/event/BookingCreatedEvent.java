@@ -19,7 +19,7 @@ public class BookingCreatedEvent extends DomainEvent {
             Long scheduleId,
             Long membershipId
     ) {
-        super();
+        super(bookingId, "BOOKING_CREATED");
         this.bookingId = bookingId;
         this.studioId = studioId;
         this.memberId = memberId;

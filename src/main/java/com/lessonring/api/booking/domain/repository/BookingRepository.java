@@ -16,4 +16,6 @@ public interface BookingRepository {
     boolean existsActiveBooking(Long memberId, Long scheduleId);
 
     List<Booking> findNoShowTargets(LocalDateTime now);
+
+    List<Booking> findRefundTargetBookings(Long membershipId, LocalDateTime now);
 }

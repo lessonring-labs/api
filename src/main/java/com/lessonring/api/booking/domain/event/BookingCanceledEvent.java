@@ -21,7 +21,7 @@ public class BookingCanceledEvent extends DomainEvent {
             Long membershipId,
             String cancelReason
     ) {
-        super();
+        super(bookingId, "BOOKING_CANCELED");
         this.bookingId = bookingId;
         this.studioId = studioId;
         this.memberId = memberId;

@@ -9,6 +9,10 @@ import lombok.Getter;
 public class LoginRequest {
 
     @NotNull
-    @Schema(description = "로그인할 사용자 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(
+            description = "로그인할 사용자 ID",
+            example = "1",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     private Long userId;
 }

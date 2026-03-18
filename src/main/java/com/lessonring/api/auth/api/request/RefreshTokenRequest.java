@@ -9,6 +9,10 @@ import lombok.Getter;
 public class RefreshTokenRequest {
 
     @NotBlank
-    @Schema(description = "재발급에 사용할 refresh token", example = "eyJhbGciOiJIUzI1NiJ9...", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(
+            description = "재발급에 사용할 refresh token",
+            example = "eyJhbGciOiJIUzI1NiJ9...",
+            requiredMode = Schema.RequiredMode.REQUIRED
+    )
     private String refreshToken;
 }

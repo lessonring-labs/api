@@ -146,6 +146,10 @@ public class Membership extends BaseEntity {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
+        if (status == MembershipStatus.REFUNDED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "환불된 이용권입니다.");
+        }
+
         if (!isWithinPeriod(today)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
@@ -175,14 +179,18 @@ public class Membership extends BaseEntity {
     }
 
     public void suspend() {
-        if (this.status == MembershipStatus.EXPIRED || this.status == MembershipStatus.USED_UP) {
+        if (this.status == MembershipStatus.EXPIRED
+                || this.status == MembershipStatus.USED_UP
+                || this.status == MembershipStatus.REFUNDED) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         this.status = MembershipStatus.SUSPENDED;
     }
 
     public void activate() {
-        if (this.status == MembershipStatus.EXPIRED || this.status == MembershipStatus.USED_UP) {
+        if (this.status == MembershipStatus.EXPIRED
+                || this.status == MembershipStatus.USED_UP
+                || this.status == MembershipStatus.REFUNDED) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         this.status = MembershipStatus.ACTIVE;
@@ -204,5 +212,12 @@ public class Membership extends BaseEntity {
         if (this.status == MembershipStatus.USED_UP && this.remainingCount > 0) {
             this.status = MembershipStatus.ACTIVE;
         }
+    }
+
+    public void refund() {
+        if (this.status == MembershipStatus.REFUNDED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 환불된 이용권입니다.");
+        }
+        this.status = MembershipStatus.REFUNDED;
     }
 }

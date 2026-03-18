@@ -1,6 +1,8 @@
 package com.lessonring.api.payment.domain;
 
 import com.lessonring.api.common.entity.BaseEntity;
+import com.lessonring.api.common.error.BusinessException;
+import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.membership.domain.MembershipType;
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -116,13 +118,23 @@ public class Payment extends BaseEntity {
     }
 
     public void complete(Long membershipId) {
+        if (this.status != PaymentStatus.READY) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
         this.status = PaymentStatus.COMPLETED;
         this.membershipId = membershipId;
         this.paidAt = LocalDateTime.now();
     }
 
     public void cancel() {
+        if (this.status == PaymentStatus.CANCELED) {
+            throw new BusinessException(ErrorCode.PAYMENT_ALREADY_CANCELED);
+        }
         this.status = PaymentStatus.CANCELED;
         this.canceledAt = LocalDateTime.now();
+    }
+
+    public boolean isCanceled() {
+        return this.status == PaymentStatus.CANCELED;
     }
 }

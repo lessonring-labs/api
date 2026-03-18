@@ -4,7 +4,7 @@ import com.lessonring.api.common.event.DomainEvent;
 import lombok.Getter;
 
 @Getter
-public class PaymentCompletedEvent extends DomainEvent {
+public class PaymentCanceledEvent extends DomainEvent {
 
     private final Long paymentId;
     private final Long studioId;
@@ -12,14 +12,14 @@ public class PaymentCompletedEvent extends DomainEvent {
     private final Long membershipId;
     private final Long amount;
 
-    public PaymentCompletedEvent(
+    public PaymentCanceledEvent(
             Long paymentId,
             Long studioId,
             Long memberId,
             Long membershipId,
             Long amount
     ) {
-        super(paymentId, "PAYMENT_COMPLETED");
+        super(paymentId, "PAYMENT_CANCELED");
         this.paymentId = paymentId;
         this.studioId = studioId;
         this.memberId = memberId;
