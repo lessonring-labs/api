@@ -36,13 +36,13 @@ erDiagram
 
     STUDIO {
         bigint id PK
-        varchar name
-        varchar phone
-        varchar address
-        varchar detail_address
-        varchar timezone
-        varchar business_number
-        varchar status
+        string name
+        string phone
+        string address
+        string detail_address
+        string timezone
+        string business_number
+        string status
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -52,14 +52,14 @@ erDiagram
     MEMBER {
         bigint id PK
         bigint studio_id FK
-        varchar name
-        varchar phone
-        varchar email
-        varchar gender
+        string name
+        string phone
+        string email
+        string gender
         date birth_date
-        varchar status
+        string status
         datetime joined_at
-        text memo
+        string memo
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -69,12 +69,12 @@ erDiagram
     INSTRUCTOR {
         bigint id PK
         bigint studio_id FK
-        varchar name
-        varchar phone
-        varchar email
-        varchar profile_image_url
-        varchar status
-        text memo
+        string name
+        string phone
+        string email
+        string profile_image_url
+        string status
+        string memo
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -85,13 +85,13 @@ erDiagram
         bigint id PK
         bigint studio_id FK
         bigint instructor_id FK
-        varchar title
-        varchar type
+        string title
+        string type
         datetime start_at
         datetime end_at
         int capacity
         int booked_count
-        varchar status
+        string status
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -102,13 +102,13 @@ erDiagram
         bigint id PK
         bigint studio_id FK
         bigint member_id FK
-        varchar name
-        varchar type
+        string name
+        string type
         int total_count
         int remaining_count
         date start_date
         date end_date
-        varchar status
+        string status
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -120,11 +120,11 @@ erDiagram
         bigint studio_id FK
         bigint member_id FK
         bigint schedule_id FK
-        bigint membership_id FK
-        varchar status
+        bigint membership_id
+        string status
         datetime booked_at
         datetime canceled_at
-        varchar cancel_reason
+        string cancel_reason
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -136,9 +136,9 @@ erDiagram
         bigint booking_id FK
         bigint member_id FK
         bigint schedule_id FK
-        varchar status
+        string status
         datetime checked_at
-        text note
+        string note
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -149,24 +149,24 @@ erDiagram
         bigint id PK
         bigint studio_id FK
         bigint member_id FK
-        bigint membership_id FK_nullable
-        varchar order_name
-        varchar method
-        varchar status
+        bigint membership_id
+        string order_name
+        string method
+        string status
         bigint amount
         datetime paid_at
         datetime canceled_at
-        varchar membership_name
-        varchar membership_type
+        string membership_name
+        string membership_type
         int membership_total_count
         date membership_start_date
         date membership_end_date
-        varchar pg_provider
-        varchar pg_order_id
-        varchar pg_payment_key
-        text pg_raw_response
-        varchar failed_reason
-        varchar idempotency_key
+        string pg_provider
+        string pg_order_id
+        string pg_payment_key
+        string pg_raw_response
+        string failed_reason
+        string idempotency_key
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -175,12 +175,12 @@ erDiagram
 
     PAYMENT_WEBHOOK_LOG {
         bigint id PK
-        varchar provider
-        varchar transmission_id
-        varchar event_type
-        varchar order_id
-        varchar payment_key
-        text payload
+        string provider
+        string transmission_id
+        string event_type
+        string order_id
+        string payment_key
+        string payload
         datetime created_at
         bigint created_by
         datetime updated_at
@@ -191,9 +191,9 @@ erDiagram
         bigint id PK
         bigint studio_id FK
         bigint member_id FK
-        varchar title
-        text content
-        varchar type
+        string title
+        string content
+        string type
         datetime read_at
         datetime created_at
         bigint created_by
@@ -204,7 +204,7 @@ erDiagram
     REFRESH_TOKEN {
         bigint id PK
         bigint user_id FK
-        varchar token
+        string token
         datetime expires_at
         datetime created_at
         bigint created_by

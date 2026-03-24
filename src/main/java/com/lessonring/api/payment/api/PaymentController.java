@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Payment", description = "결제 API")
@@ -73,6 +74,14 @@ public class PaymentController {
             @PathVariable Long id
     ) {
         return ApiResponse.success(paymentService.refund(id));
+    }
+
+    @PostMapping("/{id}/refund")
+    public ResponseEntity<RefundResponse> refund(
+            @PathVariable Long id,
+            @RequestHeader("Idempotency-Key") String idempotencyKey
+    ) {
+        return ResponseEntity.ok(paymentService.refund(id, idempotencyKey));
     }
 
     @Operation(

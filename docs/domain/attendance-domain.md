@@ -1,74 +1,54 @@
 # Attendance Domain
 
-`Attendance` 도메인은 **회원의 수업 출석 기록을 관리하는 도메인**이다.
+`attendance` 테이블과 `Attendance` 엔티티를 설명하는 문서다.
 
-예약(Booking)을 기반으로 출석이 기록된다.
+## 역할
 
----
+- 예약에 대한 실제 출석 기록을 관리한다.
+- 출석 시 이용권 차감과 예약 상태 변경을 함께 수행한다.
+- 출석 취소 시 예약 상태와 이용권 차감을 되돌린다.
 
-# 1. Domain Role
+## 엔티티
 
-Attendance의 주요 책임
+대상 클래스: `com.lessonring.api.attendance.domain.Attendance`
 
-```text
-출석 기록 생성
-출석 상태 관리
-이용권 차감 처리
-```
+테이블: `attendance`
 
----
+주요 필드:
 
-# 2. Entity Structure
+- `id`
+- `bookingId`
+- `memberId`
+- `scheduleId`
+- `status`
+- `checkedAt`
+- `note`
+- `createdAt`, `createdBy`, `updatedAt`, `updatedBy`
 
-```text
-Attendance
-- id
-- studioId
-- memberId
-- bookingId
-- scheduleId
-- status
-- attendedAt
-```
+## Enum
 
----
+`AttendanceStatus`
 
-# 3. Enum
+- `ATTENDED`
+- `ABSENT`
+- `CANCELED`
 
-```text
-ATTENDED
-ABSENT
-CANCELED
-```
+## 현재 구현 규칙
 
----
+- 출석 생성 전에 동일 `bookingId`의 출석이 이미 있는지 확인한다.
+- 출석 생성 시 예약 상태를 `ATTENDED`로 바꾸고 이용권을 차감한다.
+- 출석 취소 시 예약 상태를 `RESERVED`로 복원한다.
+- 횟수권이면 출석 취소 시 `restoreOnce()`로 차감을 되돌린다.
 
-# 4. Relationship
+## 현재 API
 
-```text
-Booking 1 : 1 Attendance
-Member 1 : N Attendance
-Schedule 1 : N Attendance
-```
+- `POST /api/v1/attendances`
+- `GET /api/v1/attendances/{id}`
+- `GET /api/v1/attendances`
+- `DELETE /api/v1/attendances/{id}`
 
----
+## 연관 관계
 
-# 5. Business Rules
-
-## 출석 처리
-
-수업 종료 후
-
-```text
-Attendance 생성
-Booking.status = ATTENDED
-Membership.remainCount -1
-```
-
----
-
-# 6. Summary
-
-```text
-Attendance는 회원의 실제 수업 출석 기록을 관리한다.
-```
+- `booking 1 : 0..1 attendance`
+- `member 1 : N attendance`
+- `schedule 1 : N attendance`

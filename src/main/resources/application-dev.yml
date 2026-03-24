@@ -1,0 +1,35 @@
+# 개발 서버 환경 전용 설정
+# 민감 정보와 접속 정보는 환경변수로 주입하는 것을 기본으로 한다.
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/lessonring}
+    username: ${DB_USERNAME:devyn}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+logging:
+  level:
+    root: INFO
+    com.lessonring: INFO
+    org.hibernate.SQL: INFO
+    org.springframework.web: INFO
+
+pg:
+  toss:
+    base-url: ${PG_TOSS_BASE_URL:https://api.tosspayments.com}
+    secret-key: ${PG_TOSS_SECRET_KEY:test_sk_xxxxx}

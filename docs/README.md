@@ -96,13 +96,18 @@ docs/domain
 
 포함 도메인
 
+- studio-domain.md
+- instructor-domain.md
 - member-domain.md
 - schedule-domain.md
 - booking-domain.md
 - membership-domain.md
 - attendance-domain.md
 - payment-domain.md
+- payment-operation-domain.md
+- payment-webhook-log-domain.md
 - notification-domain.md
+- refresh-token-domain.md
 
 각 문서는 다음 내용을 포함한다.
 
@@ -251,6 +256,7 @@ Architecture
 - docs/architecture/security-architecture.md
 - docs/architecture/domain-architecture.md
 - docs/architecture/event-architecture.md
+- docs/architecture/technology-stack.md
 
 API
 
@@ -263,14 +269,23 @@ Development
 - docs/development/package-structure.md
 - docs/development/module-dependency-rules.md
 - docs/development/transaction-strategy.md
+- docs/development/payment-entity-refactoring-plan.md
+- docs/development/entity-refactoring-guidelines.md
 
 Domain
 
+- docs/domain/studio-domain.md
+- docs/domain/instructor-domain.md
 - docs/domain/member-domain.md
 - docs/domain/schedule-domain.md
 - docs/domain/booking-domain.md
 - docs/domain/membership-domain.md
 - docs/domain/attendance-domain.md
+- docs/domain/payment-domain.md
+- docs/domain/payment-operation-domain.md
+- docs/domain/payment-webhook-log-domain.md
+- docs/domain/notification-domain.md
+- docs/domain/refresh-token-domain.md
 
 ---
 

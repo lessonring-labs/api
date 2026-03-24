@@ -128,127 +128,90 @@ docs/README.md
 
 # Tech Stack
 
-## Language
+현재 사용 중인 기술과 도입 예정 기술을 구분해서 관리한다.
 
-```
-Java
-```
+상세 기술 문서:
 
-## Framework
-
-```
-Spring Boot
+```text
+docs/architecture/technology-stack.md
 ```
 
-## Build
+## 현재 사용 중인 기술
 
-```
-Gradle
-```
+### Language / Runtime
 
-## API
+- `Java 21`: 애플리케이션 실행 언어 및 런타임
 
-```
-REST API
-Feign Client
-```
+### Framework / Build
 
-## Validation
+- `Spring Boot 3.5.9`: 백엔드 애플리케이션 프레임워크
+- `Gradle`: 빌드 및 의존성 관리
 
-```
-Spring Boot Validation
-```
+### API / Web
 
-## API Documentation
+- `Spring Web`: REST API와 웹 요청 처리
+- `Spring Validation`: 요청 DTO 검증
+- `Springdoc OpenAPI`: OpenAPI 스펙 생성
+- `Swagger UI`: API 문서 조회 화면
 
-```
-SpringDoc OpenAPI
-Swagger
-```
+### Security
 
-## Database
+- `Spring Security`: 인증/인가와 보안 필터 체인
+- `JWT`: access token, refresh token 발급 및 검증
 
-```
-PostgreSQL
-```
+### Database
 
-## Cache
+- `PostgreSQL`: 주 데이터베이스
+- `Spring Data JPA`: 리포지토리 기반 데이터 접근
+- `Hibernate`: JPA 구현체
+- `Querydsl`: 타입 세이프 쿼리 작성
+- `Flyway`: DB migration 관리
 
-```
-Redis
-```
+### Cache / Lock
 
-## Messaging
+- `Redis`: 캐시 및 키 기반 저장소
+- `Redisson`: Redis 기반 분산 락 구현
+- `Redis Distributed Lock`: 예약/결제 동시성 제어
 
-```
-Kafka
-```
+### External Integration
 
-## Authentication
+- `Toss Payments`: 결제 승인/취소 PG 연동
+- `Webhook`: 외부 결제 이벤트 수신 처리
 
-```
-JWT
-Kakao OAuth Login
-```
+### Productivity / Test
 
-## ORM
+- `Lombok`: 반복 보일러플레이트 코드 축소
+- `AssertJ`: 테스트 assertion 지원
+- `Spring Boot Test`: 통합 테스트 기반 제공
+- `Spring Security Test`: 보안 테스트 지원
 
-```
-Spring Data JPA
-QueryDSL
-```
+## 도입 예정 또는 준비 중인 기술
 
-## Migration
+현재 코드베이스에 TODO 또는 플레이스홀더는 있으나, 실사용 스택으로 확정하지 않은 항목이다.
 
-```
-Flyway
-```
+### Integration / Messaging
 
-## Mapping
+- `Kafka`: 이벤트 발행 및 비동기 메시징
+- `Feign`: 외부 HTTP API 선언형 클라이언트
+- `Kakao OAuth Login`: 카카오 로그인 연동
 
-```
-MapStruct
-```
+### Mapping / Automation
 
-## Automation
+- `MapStruct`: DTO 매핑 자동화
+- `n8n`: 운영 자동화 및 워크플로우 처리
 
-```
-n8n
-Webhook
-```
+### Observability / Analytics
 
-## Concurrency
+- `Metabase`: 지표 조회와 데이터 분석
+- `Scouter`: 애플리케이션 모니터링
+- `OpenLens`: 쿠버네티스 클러스터 관찰
 
-```
-Redis Distributed Lock
-```
+### Infrastructure / Delivery
 
-## Monitoring
-
-```
-Scouter
-OpenLens
-```
-
-## Analytics
-
-```
-Metabase
-```
-
-## Infrastructure
-
-```
-Docker
-Kubernetes (k3s)
-Nginx Ingress
-```
-
-## CI/CD
-
-```
-GitHub Actions
-```
+- `Docker`: 컨테이너 기반 실행 환경
+- `Kubernetes (k3s)`: 경량 쿠버네티스 운영 환경
+- `Nginx Ingress`: 인그레스 및 트래픽 라우팅
+- `GitHub Actions`: CI/CD 파이프라인 자동화
 
 ---
 
@@ -327,3 +290,53 @@ baseline 사용 기준:
 # License
 
 Internal Project
+
+---
+
+# 설정 파일 구조
+
+Spring 설정 파일은 공통 설정과 프로필별 설정으로 분리한다.
+
+- `src/main/resources/application.yml`
+  - 모든 환경에서 공통으로 사용하는 기본 설정
+- `src/main/resources/application-local.yml`
+  - 로컬 개발 환경 전용 설정
+- `src/main/resources/application-dev.yml`
+  - 개발 서버 환경 전용 설정
+
+정리 원칙:
+
+- 공통으로 유지되는 값은 `application.yml`에 둔다.
+- DB, Redis, 외부 연동 키처럼 환경마다 달라지는 값은 프로필 파일로 분리한다.
+- `dev` 환경에서는 가능한 한 환경변수로 값을 주입한다.
+
+실행 예시:
+
+```bash
+./gradlew bootRun
+```
+
+기본 실행은 `local` 프로필을 사용한다.
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+```bash
+./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+`dev` 프로필 실행 시 필요한 대표 환경변수:
+
+```bash
+DB_URL=jdbc:postgresql://localhost:5432/lessonring
+DB_USERNAME=devyn
+DB_PASSWORD=
+REDIS_HOST=localhost
+REDIS_PORT=6379
+PG_TOSS_SECRET_KEY=test_sk_xxxxx
+PG_TOSS_BASE_URL=https://api.tosspayments.com
+JWT_SECRET=your-secret-key-your-secret-key-your-secret-key
+JWT_ACCESS_TOKEN_EXPIRATION=3600000
+JWT_REFRESH_TOKEN_EXPIRATION=1209600000
+```

@@ -4,6 +4,7 @@
 .gradle/
 build/
 /gradle/wrapper/
+!/gradle/wrapper/
 !/gradle/wrapper/gradle-wrapper.jar
 !/gradle/wrapper/gradle-wrapper.properties
 # gradlew 파일들은 명시적으로 제외하지 않았으므로 Git에 관리됩니다.

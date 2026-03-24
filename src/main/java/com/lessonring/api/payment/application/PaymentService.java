@@ -5,17 +5,22 @@ import com.lessonring.api.booking.domain.repository.BookingRepository;
 import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.common.event.DomainEventPublisher;
+import com.lessonring.api.common.lock.RedisLockManager;
 import com.lessonring.api.member.domain.repository.MemberRepository;
 import com.lessonring.api.membership.domain.Membership;
 import com.lessonring.api.membership.domain.MembershipType;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.request.PaymentCreateRequest;
 import com.lessonring.api.payment.api.response.RefundResponse;
+import com.lessonring.api.payment.application.support.RequestHashGenerator;
+import com.lessonring.api.payment.domain.OperationType;
 import com.lessonring.api.payment.domain.Payment;
+import com.lessonring.api.payment.domain.PaymentOperation;
 import com.lessonring.api.payment.domain.PaymentStatus;
 import com.lessonring.api.payment.domain.event.PaymentCanceledEvent;
 import com.lessonring.api.payment.domain.event.PaymentCompletedEvent;
 import com.lessonring.api.payment.domain.repository.PaymentRepository;
+import com.lessonring.api.payment.infrastructure.lock.PaymentRedisLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgCancelRequest;
 import com.lessonring.api.payment.infrastructure.pg.PgCancelResponse;
 import com.lessonring.api.payment.infrastructure.pg.PgClient;
@@ -27,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -38,8 +44,12 @@ public class PaymentService {
     private final BookingRepository bookingRepository;
 
     private final DomainEventPublisher domainEventPublisher;
-
     private final PgClient pgClient;
+
+    private final PaymentOperationService paymentOperationService;
+    private final RequestHashGenerator requestHashGenerator;
+    private final RedisLockManager redisLockManager;
+    private final PaymentRedisLockManager paymentRedisLockManager;
 
     @Transactional
     public Payment create(PaymentCreateRequest request) {
@@ -209,6 +219,131 @@ public class PaymentService {
                 payment.getStatus().name(),
                 membership.getStatus().name()
         );
+    }
+
+    @Transactional
+    public RefundResponse refund(Long id, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "Idempotency-Key는 필수입니다.");
+        }
+
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        String requestHash = requestHashGenerator.generateRefundHash(
+                payment.getId(),
+                payment.getMembershipId(),
+                payment.getMemberId()
+        );
+
+        PaymentOperationStartResult startResult = paymentOperationService.startOrGet(
+                payment.getId(),
+                OperationType.REFUND,
+                idempotencyKey,
+                requestHash
+        );
+
+        PaymentOperation operation = startResult.operation();
+
+        if (!startResult.newlyCreated()) {
+            if (operation.isSucceeded()) {
+                return paymentOperationService.restoreRefundResponse(operation);
+            }
+
+            if (operation.isProcessing()) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 처리 중인 환불 요청입니다.");
+            }
+        }
+
+        boolean locked = false;
+
+        try {
+            locked = paymentRedisLockManager.tryRefundLock(payment.getId(), 3, TimeUnit.SECONDS);
+            if (!locked) {
+                throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 다른 환불 요청이 처리 중입니다.");
+            }
+
+            payment = paymentRepository.findById(id)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+
+            if (payment.getStatus() != PaymentStatus.COMPLETED) {
+                throw new BusinessException(ErrorCode.PAYMENT_REFUND_NOT_ALLOWED, "완료된 결제만 환불할 수 있습니다.");
+            }
+
+            if (payment.getMembershipId() == null) {
+                throw new BusinessException(ErrorCode.PAYMENT_REFUND_NOT_ALLOWED, "연결된 이용권이 없는 결제입니다.");
+            }
+
+            Membership membership = membershipRepository.findById(payment.getMembershipId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.MEMBERSHIP_NOT_FOUND));
+
+            if (membership.isRefunded()) {
+                throw new BusinessException(ErrorCode.MEMBERSHIP_REFUNDED);
+            }
+
+            long refundAmount = calculateRefundAmount(payment, membership);
+
+            PgCancelResponse pgResponse = pgClient.cancel(
+                    PgCancelRequest.builder()
+                            .paymentKey(payment.getPgPaymentKey())
+                            .cancelAmount(refundAmount)
+                            .reason("사용자 환불")
+                            .build()
+            );
+
+            if (!pgResponse.isSuccess()) {
+                throw new BusinessException(ErrorCode.PG_CANCEL_FAILED, "PG 결제 취소에 실패했습니다.");
+            }
+
+            List<Booking> refundTargetBookings = bookingRepository.findRefundTargetBookings(
+                    payment.getMembershipId(),
+                    LocalDateTime.now()
+            );
+
+            for (Booking booking : refundTargetBookings) {
+                booking.cancel("payment refunded");
+            }
+
+            int canceledBookingCount = refundTargetBookings.size();
+
+            membership.refund();
+            payment.cancelWithPg(pgResponse.getRawResponse());
+
+            domainEventPublisher.publish(
+                    new PaymentCanceledEvent(
+                            payment.getId(),
+                            payment.getStudioId(),
+                            payment.getMemberId(),
+                            payment.getMembershipId(),
+                            refundAmount
+                    )
+            );
+
+            RefundResponse response = new RefundResponse(
+                    payment.getId(),
+                    payment.getMemberId(),
+                    payment.getMembershipId(),
+                    refundAmount,
+                    canceledBookingCount,
+                    payment.getStatus().name(),
+                    membership.getStatus().name()
+            );
+
+            operation.markSucceeded(
+                    pgResponse.getRawResponse(),
+                    paymentOperationService.toJson(response)
+            );
+
+            return response;
+
+        } catch (Exception e) {
+            operation.markFailed("REFUND_ERROR", e.getMessage());
+            throw e;
+        } finally {
+            if (locked) {
+                paymentRedisLockManager.unlockRefund(payment.getId());
+            }
+        }
     }
 
     private long calculateRefundAmount(Payment payment, Membership membership) {

@@ -1,104 +1,62 @@
 # Schedule Domain
 
-`Schedule` 도메인은 LessonRing에서 **실제 수업 시간표를 관리하는 도메인**이다.
+`schedule` 테이블과 `Schedule` 엔티티를 설명하는 문서다.
 
-회원은 이 Schedule을 기준으로 예약(Booking)을 생성한다.
+## 역할
 
----
+- 수업 일정을 관리한다.
+- 강사, 시간, 정원, 예약 수를 함께 가진다.
+- 예약 가능 여부 판단의 기준이 된다.
 
-# 1. Domain Role
+## 엔티티
 
-Schedule의 주요 책임
+대상 클래스: `com.lessonring.api.schedule.domain.Schedule`
 
-```text
-수업 시간표 관리
-수업 정원 관리
-예약 대상 수업 제공
-```
+테이블: `schedule`
 
-한 줄 정의
+주요 필드:
 
-```text
-Schedule은 스튜디오의 실제 수업 시간을 관리하는 도메인이다.
-```
+- `id`
+- `studioId`
+- `instructorId`
+- `title`
+- `type`
+- `startAt`
+- `endAt`
+- `capacity`
+- `bookedCount`
+- `status`
+- `createdAt`, `createdBy`, `updatedAt`, `updatedBy`
 
----
+## Enum
 
-# 2. Entity Structure
+`ScheduleType`
 
-```text
-Schedule
-- id
-- studioId
-- instructorId
-- name
-- startTime
-- endTime
-- capacity
-- reservedCount
-```
+- `PRIVATE`
+- `GROUP`
 
-설명
+`ScheduleStatus`
 
-```text
-studioId       → 스튜디오
-instructorId   → 강사
-name           → 수업 이름
-startTime      → 시작 시간
-endTime        → 종료 시간
-capacity       → 정원
-reservedCount  → 현재 예약 수
-```
+- `OPEN`
+- `CLOSED`
+- `CANCELED`
 
----
+## 현재 구현 규칙
 
-# 3. Relationship
+- 생성 시 `bookedCount = 0`, `status = OPEN`으로 시작한다.
+- `startAt`은 `endAt`보다 빨라야 한다.
+- `increaseBookedCount()`는 정원을 초과하면 실패한다.
+- `decreaseBookedCount()`는 최소 0까지만 감소한다.
 
-```text
-Instructor 1 : N Schedule
-Schedule 1 : N Booking
-```
+## 현재 API
 
----
+- `POST /api/v1/schedules`
+- `GET /api/v1/schedules/{id}`
+- `GET /api/v1/schedules`
 
-# 4. Business Rules
+## 연관 관계
 
-## 정원 제한
-
-예약 가능 조건
-
-```text
-reservedCount < capacity
-```
-
----
-
-## 시간 기준 수업
-
-```text
-startTime
-endTime
-```
-
-예약은 반드시 수업 시작 이전에 생성되어야 한다.
-
----
-
-# 5. Layered Structure
-
-```
-schedule
-├─ api
-├─ application
-├─ domain
-└─ infrastructure
-```
-
----
-
-# 6. Summary
-
-```text
-Schedule은 실제 수업 시간을 정의하는 도메인이다.
-Booking은 Schedule을 기준으로 생성된다.
-```
+- `studio 1 : N schedule`
+- `instructor 1 : N schedule`
+- `schedule 1 : N booking`
+- `schedule 1 : N attendance`

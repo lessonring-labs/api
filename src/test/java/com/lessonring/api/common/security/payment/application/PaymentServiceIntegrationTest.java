@@ -1,6 +1,4 @@
-package com.lessonring.api.payment.application;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+package com.lessonring.api.common.security.payment.application;
 
 import com.lessonring.api.booking.domain.Booking;
 import com.lessonring.api.booking.domain.repository.BookingRepository;
@@ -12,23 +10,43 @@ import com.lessonring.api.membership.domain.Membership;
 import com.lessonring.api.membership.domain.MembershipType;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.response.RefundResponse;
+import com.lessonring.api.payment.application.PaymentService;
 import com.lessonring.api.payment.domain.Payment;
 import com.lessonring.api.payment.domain.PaymentMethod;
 import com.lessonring.api.payment.domain.repository.PaymentRepository;
+import com.lessonring.api.payment.infrastructure.pg.PgCancelRequest;
+import com.lessonring.api.payment.infrastructure.pg.PgCancelResponse;
+import com.lessonring.api.payment.infrastructure.pg.PgClient;
 import com.lessonring.api.schedule.domain.Schedule;
 import com.lessonring.api.schedule.domain.ScheduleType;
 import com.lessonring.api.schedule.domain.repository.ScheduleRepository;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import com.lessonring.api.support.TestExternalMockConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 
 @SpringBootTest
 @Transactional
+@Import(TestExternalMockConfig.class)
 class PaymentServiceIntegrationTest {
 
     @Autowired
@@ -49,10 +67,29 @@ class PaymentServiceIntegrationTest {
     @Autowired
     private ScheduleRepository scheduleRepository;
 
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private PgClient pgClient;
+
+    @BeforeEach
+    void setUp() {
+        Mockito.reset(pgClient);
+    }
+
+    @TestConfiguration
+    static class MockConfig {
+
+        @Bean
+        PgClient pgClient() {
+            return Mockito.mock(PgClient.class);
+        }
+    }
+
     @Test
     @DisplayName("COMPLETED 상태가 아닌 결제는 환불할 수 없다")
     void refund_should_fail_when_payment_is_not_completed() {
-        // given
         Long studioId = 1L;
         Member member = createMember(studioId);
 
@@ -68,10 +105,9 @@ class PaymentServiceIntegrationTest {
                 LocalDate.now().minusDays(1),
                 LocalDate.now().plusDays(30)
         );
-        payment = paymentRepository.save(payment); // READY 상태
+        payment = paymentRepository.save(payment);
         Long paymentId = payment.getId();
 
-        // when & then
         assertThatThrownBy(() -> paymentService.refund(paymentId))
                 .isInstanceOf(BusinessException.class);
     }
@@ -79,7 +115,6 @@ class PaymentServiceIntegrationTest {
     @Test
     @DisplayName("이미 환불된 이용권이 연결된 결제는 다시 환불할 수 없다")
     void refund_should_fail_when_membership_already_refunded() {
-        // given
         Long studioId = 1L;
         Member member = createMember(studioId);
 
@@ -111,9 +146,160 @@ class PaymentServiceIntegrationTest {
         payment.complete(membership.getId(), "paymentKey_123", "{\"status\":\"DONE\"}");
         Long paymentId = payment.getId();
 
-        // when & then
         assertThatThrownBy(() -> paymentService.refund(paymentId))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("동일 paymentId에 대해 서로 다른 idempotencyKey로 동시에 refund 요청하면 1건만 성공한다")
+    void refund_concurrent_different_keys_only_one_success() throws Exception {
+        RefundFixture fixture = createCountRefundFixture();
+
+        Mockito.when(pgClient.cancel(any(PgCancelRequest.class)))
+                .thenAnswer(invocation -> {
+                    Thread.sleep(500);
+                    PgCancelResponse response = Mockito.mock(PgCancelResponse.class);
+                    Mockito.when(response.isSuccess()).thenReturn(true);
+                    Mockito.when(response.getRawResponse()).thenReturn("{\"cancelKey\":\"cancel-key-1\"}");
+                    return response;
+                });
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        List<ResultHolder> results = new CopyOnWriteArrayList<>();
+
+        try {
+            Callable<Void> task1 = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+
+                try {
+                    RefundResponse response = executeInNewTransaction(() ->
+                            paymentService.refund(fixture.paymentId(), "refund-key-1")
+                    );
+                    results.add(ResultHolder.success(response));
+                } catch (Exception e) {
+                    results.add(ResultHolder.failure(e));
+                }
+                return null;
+            };
+
+            Callable<Void> task2 = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+
+                try {
+                    RefundResponse response = executeInNewTransaction(() ->
+                            paymentService.refund(fixture.paymentId(), "refund-key-2")
+                    );
+                    results.add(ResultHolder.success(response));
+                } catch (Exception e) {
+                    results.add(ResultHolder.failure(e));
+                }
+                return null;
+            };
+
+            Future<Void> future1 = executorService.submit(task1);
+            Future<Void> future2 = executorService.submit(task2);
+
+            readyLatch.await();
+            startLatch.countDown();
+
+            future1.get();
+            future2.get();
+        } finally {
+            executorService.shutdownNow();
+        }
+
+        long successCount = results.stream().filter(ResultHolder::isSuccess).count();
+        long failureCount = results.stream().filter(ResultHolder::isFailure).count();
+
+        assertThat(successCount).isEqualTo(1);
+        assertThat(failureCount).isEqualTo(1);
+
+        Payment payment = paymentRepository.findById(fixture.paymentId()).orElseThrow();
+        Membership membership = membershipRepository.findById(fixture.membershipId()).orElseThrow();
+        Booking futureBooking1 = bookingRepository.findById(fixture.futureBookingId1()).orElseThrow();
+        Booking futureBooking2 = bookingRepository.findById(fixture.futureBookingId2()).orElseThrow();
+        Booking pastAttendedBooking = bookingRepository.findById(fixture.pastAttendedBookingId()).orElseThrow();
+
+        assertThat(payment.getStatus().name()).isEqualTo("CANCELED");
+        assertThat(membership.getStatus().name()).isEqualTo("REFUNDED");
+        assertThat(futureBooking1.getStatus().name()).isEqualTo("CANCELED");
+        assertThat(futureBooking2.getStatus().name()).isEqualTo("CANCELED");
+        assertThat(pastAttendedBooking.getStatus().name()).isEqualTo("ATTENDED");
+
+        Mockito.verify(pgClient, Mockito.times(1)).cancel(any(PgCancelRequest.class));
+    }
+
+    @Test
+    @DisplayName("동일 paymentId에 대해 동일 idempotencyKey로 동시에 refund 요청하면 1건만 실제 처리된다")
+    void refund_concurrent_same_key_only_one_real_execution() throws Exception {
+        RefundFixture fixture = createCountRefundFixture();
+
+        Mockito.when(pgClient.cancel(any(PgCancelRequest.class)))
+                .thenAnswer(invocation -> {
+                    Thread.sleep(500);
+                    PgCancelResponse response = Mockito.mock(PgCancelResponse.class);
+                    Mockito.when(response.isSuccess()).thenReturn(true);
+                    Mockito.when(response.getRawResponse()).thenReturn("{\"cancelKey\":\"cancel-key-same\"}");
+                    return response;
+                });
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        List<ResultHolder> results = new CopyOnWriteArrayList<>();
+        String sameKey = "refund-same-key";
+
+        try {
+            Callable<Void> task = () -> {
+                readyLatch.countDown();
+                startLatch.await();
+
+                try {
+                    RefundResponse response = executeInNewTransaction(() ->
+                            paymentService.refund(fixture.paymentId(), sameKey)
+                    );
+                    results.add(ResultHolder.success(response));
+                } catch (Exception e) {
+                    results.add(ResultHolder.failure(e));
+                }
+                return null;
+            };
+
+            Future<Void> future1 = executorService.submit(task);
+            Future<Void> future2 = executorService.submit(task);
+
+            readyLatch.await();
+            startLatch.countDown();
+
+            future1.get();
+            future2.get();
+        } finally {
+            executorService.shutdownNow();
+        }
+
+        long successCount = results.stream().filter(ResultHolder::isSuccess).count();
+        long failureCount = results.stream().filter(ResultHolder::isFailure).count();
+
+        assertThat(successCount).isEqualTo(1);
+        assertThat(failureCount).isEqualTo(1);
+
+        Payment payment = paymentRepository.findById(fixture.paymentId()).orElseThrow();
+        Membership membership = membershipRepository.findById(fixture.membershipId()).orElseThrow();
+        Booking futureBooking1 = bookingRepository.findById(fixture.futureBookingId1()).orElseThrow();
+        Booking futureBooking2 = bookingRepository.findById(fixture.futureBookingId2()).orElseThrow();
+        Booking pastAttendedBooking = bookingRepository.findById(fixture.pastAttendedBookingId()).orElseThrow();
+
+        assertThat(payment.getStatus().name()).isEqualTo("CANCELED");
+        assertThat(membership.getStatus().name()).isEqualTo("REFUNDED");
+        assertThat(futureBooking1.getStatus().name()).isEqualTo("CANCELED");
+        assertThat(futureBooking2.getStatus().name()).isEqualTo("CANCELED");
+        assertThat(pastAttendedBooking.getStatus().name()).isEqualTo("ATTENDED");
+
+        Mockito.verify(pgClient, Mockito.times(1)).cancel(any(PgCancelRequest.class));
     }
 
     @Test
@@ -234,6 +420,19 @@ class PaymentServiceIntegrationTest {
 
         assertThatThrownBy(() -> paymentService.refund(paymentId))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    private <T> T executeInNewTransaction(Callable<T> callable) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        return template.execute(status -> {
+            try {
+                return callable.call();
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     private RefundFixture createCountRefundFixture() {
@@ -468,6 +667,32 @@ class PaymentServiceIntegrationTest {
         payment.complete(membershipId, "paymentKey_123", "{\"status\":\"DONE\"}");
 
         return payment;
+    }
+
+    private static class ResultHolder {
+        private final RefundResponse response;
+        private final Exception exception;
+
+        private ResultHolder(RefundResponse response, Exception exception) {
+            this.response = response;
+            this.exception = exception;
+        }
+
+        static ResultHolder success(RefundResponse response) {
+            return new ResultHolder(response, null);
+        }
+
+        static ResultHolder failure(Exception exception) {
+            return new ResultHolder(null, exception);
+        }
+
+        boolean isSuccess() {
+            return response != null;
+        }
+
+        boolean isFailure() {
+            return exception != null;
+        }
     }
 
     private record RefundFixture(

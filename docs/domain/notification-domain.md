@@ -1,82 +1,41 @@
 # Notification Domain
 
-`Notification` 도메인은 LessonRing에서 **회원 또는 관리자에게 전달되는 알림을 관리하는 도메인**이다.
+`notification` 테이블과 `Notification` 엔티티를 설명하는 문서다.
 
----
+## 역할
 
-# 1. Domain Role
+- 회원에게 전달할 알림 이력을 저장한다.
+- 읽음 처리를 통해 사용자별 알림 상태를 관리한다.
 
-Notification의 주요 책임
+## 엔티티
 
-```text
-알림 생성
-알림 조회
-알림 읽음 처리
-```
+대상 클래스: `com.lessonring.api.notification.domain.Notification`
 
----
+테이블: `notification`
 
-# 2. Entity Structure
+주요 필드:
 
-```text
-Notification
-- id
-- studioId
-- memberId
-- title
-- content
-- type
-- readAt
-```
+- `id`
+- `studioId`
+- `memberId`
+- `title`
+- `content`
+- `type`
+- `readAt`
+- `createdAt`, `createdBy`, `updatedAt`, `updatedBy`
 
----
+## 현재 구현 규칙
 
-# 3. Notification Type
+- 알림은 스튜디오와 회원에 귀속된다.
+- `read()` 호출 시 `readAt = now()`로 기록한다.
+- 조회는 회원 기준 내림차순 목록 조회를 사용한다.
 
-```text
-BOOKING_CREATED
-BOOKING_CANCELED
-CLASS_REMINDER
-PAYMENT_COMPLETED
-```
+## 현재 API
 
----
+- `GET /api/v1/notifications?memberId={memberId}`
+- `PATCH /api/v1/notifications/{id}/read`
 
-# 4. Relationship
+## 연관 관계
 
-```text
-Member 1 : N Notification
-```
-
----
-
-# 5. Business Rules
-
-## 읽음 처리
-
-```text
-readAt != null
-```
-
-이면 읽음 상태이다.
-
----
-
-# 6. Notification Trigger
-
-알림 생성 시점
-
-```text
-예약 생성
-예약 취소
-수업 시작 알림
-결제 완료
-```
-
----
-
-# 7. Summary
-
-```text
-Notification은 시스템 이벤트 발생 시 사용자에게 전달되는 알림을 관리한다.
-```
+- `member 1 : N notification`
+- `studio 1 : N notification`
