@@ -272,6 +272,8 @@ Development
 - docs/development/payment-entity-refactoring-plan.md
 - docs/development/entity-refactoring-guidelines.md
 - docs/development/internationalization-design.md
+- docs/development/project-roadmap.md
+- docs/development/vision-and-metrics.md
 
 Domain
 
