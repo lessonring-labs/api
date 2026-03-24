@@ -3,8 +3,13 @@ set -euo pipefail
 
 DB_USER="${DB_USER:-devyn}"
 DB_NAME="${DB_NAME:-lessonring}"
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_PASSWORD="${DB_PASSWORD:-}"
 
-psql -U "$DB_USER" -d "$DB_NAME" <<'SQL'
+export PGPASSWORD="$DB_PASSWORD"
+
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<'SQL'
 BEGIN;
 
 DELETE FROM attendance;

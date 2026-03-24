@@ -27,6 +27,8 @@ import com.lessonring.api.payment.infrastructure.pg.PgClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -256,11 +258,23 @@ public class PaymentService {
         }
 
         boolean locked = false;
+        boolean unlockDeferred = false;
 
         try {
             locked = paymentRedisLockManager.tryRefundLock(payment.getId(), 3, TimeUnit.SECONDS);
             if (!locked) {
                 throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 다른 환불 요청이 처리 중입니다.");
+            }
+
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                Long paymentId = payment.getId();
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        paymentRedisLockManager.unlockRefund(paymentId);
+                    }
+                });
+                unlockDeferred = true;
             }
 
             payment = paymentRepository.findById(id)
@@ -340,7 +354,7 @@ public class PaymentService {
             operation.markFailed("REFUND_ERROR", e.getMessage());
             throw e;
         } finally {
-            if (locked) {
+            if (locked && !unlockDeferred) {
                 paymentRedisLockManager.unlockRefund(payment.getId());
             }
         }

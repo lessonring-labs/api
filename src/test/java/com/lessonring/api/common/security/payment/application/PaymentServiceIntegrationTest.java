@@ -28,10 +28,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -76,15 +75,6 @@ class PaymentServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         Mockito.reset(pgClient);
-    }
-
-    @TestConfiguration
-    static class MockConfig {
-
-        @Bean
-        PgClient pgClient() {
-            return Mockito.mock(PgClient.class);
-        }
     }
 
     @Test
@@ -153,7 +143,7 @@ class PaymentServiceIntegrationTest {
     @Test
     @DisplayName("동일 paymentId에 대해 서로 다른 idempotencyKey로 동시에 refund 요청하면 1건만 성공한다")
     void refund_concurrent_different_keys_only_one_success() throws Exception {
-        RefundFixture fixture = createCountRefundFixture();
+        RefundFixture fixture = executeInNewTransaction(this::createCountRefundFixture);
 
         Mockito.when(pgClient.cancel(any(PgCancelRequest.class)))
                 .thenAnswer(invocation -> {
@@ -236,7 +226,7 @@ class PaymentServiceIntegrationTest {
     @Test
     @DisplayName("동일 paymentId에 대해 동일 idempotencyKey로 동시에 refund 요청하면 1건만 실제 처리된다")
     void refund_concurrent_same_key_only_one_real_execution() throws Exception {
-        RefundFixture fixture = createCountRefundFixture();
+        RefundFixture fixture = executeInNewTransaction(this::createCountRefundFixture);
 
         Mockito.when(pgClient.cancel(any(PgCancelRequest.class)))
                 .thenAnswer(invocation -> {
@@ -424,6 +414,7 @@ class PaymentServiceIntegrationTest {
 
     private <T> T executeInNewTransaction(Callable<T> callable) {
         TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         return template.execute(status -> {
             try {
                 return callable.call();

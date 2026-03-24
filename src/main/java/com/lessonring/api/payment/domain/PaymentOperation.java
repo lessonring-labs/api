@@ -44,8 +44,7 @@ public class PaymentOperation extends BaseEntity {
     @Column(name = "provider_reference", length = 200)
     private String providerReference;
 
-    @Lob
-    @Column(name = "response_payload")
+    @Column(name = "response_payload", columnDefinition = "TEXT")
     private String responsePayload;
 
     @Column(name = "error_code", length = 100)
