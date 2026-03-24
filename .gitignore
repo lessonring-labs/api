@@ -1,50 +1,53 @@
 # =========================
-# Gradle
+# Gradle & Wrapper
 # =========================
 .gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
+/gradle/wrapper/
+!/gradle/wrapper/gradle-wrapper.jar
+!/gradle/wrapper/gradle-wrapper.properties
+# gradlew 파일들은 명시적으로 제외하지 않았으므로 Git에 관리됩니다.
 
 # =========================
-# IntelliJ
+# IntelliJ & IDEs
 # =========================
 .idea/
+.vscode/
 *.iml
+*.ipr
+*.iws
 out/
-
-# =========================
-# Mac
-# =========================
-.DS_Store
-
-# =========================
-# Logs
-# =========================
-logs/
-*.log
+.classpath
+.project
+.settings/
+bin/
 
 # =========================
 # OS Files
 # =========================
+.DS_Store
 Thumbs.db
+desktop.ini
 
 # =========================
-# Environment
+# Environment & Logs
 # =========================
 .env
 .env.*
+logs/
+*.log
+hs_err_pid*
+replay_pid*
 
 # =========================
-# Test
-# =========================
-test-output/
-
-# =========================
-# Docker
-# =========================
-docker-data/
-
-# =========================
-# Node (future frontend)
+# Node (frontend)
 # =========================
 node_modules/
+.npm
+dist/
+
+# =========================
+# Test & Docker
+# =========================
+test-output/
+docker-data/

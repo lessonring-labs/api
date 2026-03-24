@@ -278,6 +278,52 @@ docs/README.md
 
 ---
 
+# Database Migration
+
+Flyway migration 파일은 아래 경로에서 관리한다.
+
+```text
+src/main/resources/db/migration
+```
+
+정리 규칙:
+
+- `V1`부터 `V12`까지: 테이블 생성 및 스키마 정의
+- `V13`: 인덱스와 제약조건만 관리
+
+현재 migration 순서:
+
+- `V1__create_studio.sql`
+- `V2__create_instructor.sql`
+- `V3__create_member.sql`
+- `V4__create_membership.sql`
+- `V5__create_schedule.sql`
+- `V6__create_booking.sql`
+- `V7__create_attendance.sql`
+- `V8__create_payment.sql`
+- `V9__create_notification.sql`
+- `V10__create_refresh_token.sql`
+- `V11__create_payment_webhook_log.sql`
+- `V12__create_payment_operation.sql`
+- `V13__add_constraints_and_indexes.sql`
+
+설명:
+
+- `payment` 관련 후속 스키마 변경은 `V8__create_payment.sql`에 흡수했다.
+- `payment_webhook_log` 관련 후속 스키마 변경은 `V11__create_payment_webhook_log.sql`에 흡수했다.
+- 인덱스와 unique 제약 정의는 `V13__add_constraints_and_indexes.sql`에 모아뒀다.
+- 기존 DB에 이전 migration 이력이 이미 적용돼 있다면, re-baseline 계획 없이 파일명이나 순서를 바꾸면 안 된다.
+- baseline 초기 스키마 파일 위치: `src/main/resources/db/baseline/V1__init_schema.sql`
+
+baseline 사용 기준:
+
+- `src/main/resources/db/baseline/V1__init_schema.sql`은 새 데이터베이스를 처음부터 구성할 때만 사용한다.
+- 현재 활성 Flyway `migration` 디렉터리에는 이미 `V1`이 있으므로, baseline 파일을 그대로 옮겨 넣으면 안 된다.
+- 기존 데이터베이스는 현재 `V1`부터 `V13`까지의 migration 이력을 그대로 유지한다.
+- 기존 환경을 baseline 방식으로 전환하려면 별도의 re-baseline 계획이 필요하다.
+
+---
+
 # License
 
 Internal Project

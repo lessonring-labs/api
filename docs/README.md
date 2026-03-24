@@ -286,3 +286,24 @@ LessonRing Backend 문서는 다음 영역으로 구성된다.
 
 각 문서는 Backend 시스템의 설계와 개발 규칙을 정의하며  
 프로젝트의 **일관성, 확장성, 유지보수성**을 확보하는 것을 목표로 한다.
+
+---
+
+# ERD 문서
+
+아키텍처 ERD 관련 추가 문서
+
+- docs/architecture/erd.md
+- docs/architecture/erd-ddl.md
+- docs/architecture/erd-flyway-migration.md
+- docs/architecture/erd-dbml.md
+
+---
+
+# Migration 문서
+
+DB migration 및 baseline 관련 참고 경로
+
+- src/main/resources/db/migration
+- src/main/resources/db/baseline/V1__init_schema.sql
+- docs/architecture/erd-flyway-migration.md
