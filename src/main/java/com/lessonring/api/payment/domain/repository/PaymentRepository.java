@@ -11,4 +11,8 @@ public interface PaymentRepository {
     Optional<Payment> findById(Long id);
 
     List<Payment> findAll();
+
+    Optional<Payment> findByPgOrderId(String pgOrderId);
+
+    Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 }

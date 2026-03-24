@@ -31,7 +31,11 @@ public class QPayment extends EntityPathBase<Payment> {
     //inherited
     public final NumberPath<Long> createdBy = _super.createdBy;
 
+    public final StringPath failedReason = createString("failedReason");
+
     public final NumberPath<Long> id = createNumber("id", Long.class);
+
+    public final StringPath idempotencyKey = createString("idempotencyKey");
 
     public final NumberPath<Long> memberId = createNumber("memberId", Long.class);
 
@@ -52,6 +56,14 @@ public class QPayment extends EntityPathBase<Payment> {
     public final DateTimePath<java.time.LocalDateTime> paidAt = createDateTime("paidAt", java.time.LocalDateTime.class);
 
     public final EnumPath<PaymentMethod> paymentMethod = createEnum("paymentMethod", PaymentMethod.class);
+
+    public final StringPath pgOrderId = createString("pgOrderId");
+
+    public final StringPath pgPaymentKey = createString("pgPaymentKey");
+
+    public final StringPath pgProvider = createString("pgProvider");
+
+    public final StringPath pgRawResponse = createString("pgRawResponse");
 
     public final EnumPath<PaymentStatus> status = createEnum("status", PaymentStatus.class);
 

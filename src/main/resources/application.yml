@@ -46,3 +46,8 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui
+
+pg:
+  toss:
+    secret-key: test_sk_xxxxx
+    base-url: https://api.tosspayments.com

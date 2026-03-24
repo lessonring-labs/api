@@ -27,4 +27,14 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     public List<Payment> findAll() {
         return paymentJpaRepository.findAll();
     }
+
+    @Override
+    public Optional<Payment> findByPgOrderId(String pgOrderId) {
+        return paymentJpaRepository.findByPgOrderId(pgOrderId);
+    }
+
+    @Override
+    public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
+        return paymentJpaRepository.findByIdempotencyKey(idempotencyKey);
+    }
 }

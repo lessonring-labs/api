@@ -83,6 +83,7 @@ public enum ErrorCode {
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "결제 정보를 찾을 수 없습니다."),
     PAYMENT_ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "P002", "이미 취소된 결제입니다."),
     PAYMENT_REFUND_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "P003", "환불할 수 없는 결제입니다."),
+    PG_CANCEL_FAILED(HttpStatus.BAD_REQUEST, "P004", "PG 결제 취소에 실패했습니다."),
 
     /**
      * =========================

@@ -16,13 +16,17 @@ import com.lessonring.api.payment.domain.PaymentStatus;
 import com.lessonring.api.payment.domain.event.PaymentCanceledEvent;
 import com.lessonring.api.payment.domain.event.PaymentCompletedEvent;
 import com.lessonring.api.payment.domain.repository.PaymentRepository;
+import com.lessonring.api.payment.infrastructure.pg.PgCancelRequest;
+import com.lessonring.api.payment.infrastructure.pg.PgCancelResponse;
+import com.lessonring.api.payment.infrastructure.pg.PgClient;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +36,10 @@ public class PaymentService {
     private final MemberRepository memberRepository;
     private final MembershipRepository membershipRepository;
     private final BookingRepository bookingRepository;
+
     private final DomainEventPublisher domainEventPublisher;
+
+    private final PgClient pgClient;
 
     @Transactional
     public Payment create(PaymentCreateRequest request) {
@@ -43,6 +50,15 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "이용권 시작일은 종료일보다 늦을 수 없습니다.");
         }
 
+        if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
+            return paymentRepository.findByIdempotencyKey(request.getIdempotencyKey())
+                    .orElseGet(() -> createNewPayment(request));
+        }
+
+        return createNewPayment(request);
+    }
+
+    private Payment createNewPayment(PaymentCreateRequest request) {
         Payment payment = Payment.create(
                 request.getStudioId(),
                 request.getMemberId(),
@@ -53,7 +69,8 @@ public class PaymentService {
                 request.getMembershipType(),
                 request.getMembershipTotalCount(),
                 request.getMembershipStartDate(),
-                request.getMembershipEndDate()
+                request.getMembershipEndDate(),
+                request.getIdempotencyKey()
         );
 
         return paymentRepository.save(payment);
@@ -147,6 +164,18 @@ public class PaymentService {
 
         long refundAmount = calculateRefundAmount(payment, membership);
 
+        PgCancelResponse pgResponse = pgClient.cancel(
+                PgCancelRequest.builder()
+                        .paymentKey(payment.getPgPaymentKey())
+                        .cancelAmount(refundAmount)
+                        .reason("사용자 환불")
+                        .build()
+        );
+
+        if (!pgResponse.isSuccess()) {
+            throw new BusinessException(ErrorCode.PG_CANCEL_FAILED, "PG 결제 취소에 실패했습니다.");
+        }
+
         List<Booking> refundTargetBookings = bookingRepository.findRefundTargetBookings(
                 payment.getMembershipId(),
                 LocalDateTime.now()
@@ -159,7 +188,7 @@ public class PaymentService {
         int canceledBookingCount = refundTargetBookings.size();
 
         membership.refund();
-        payment.cancel();
+        payment.cancelWithPg(pgResponse.getRawResponse());
 
         domainEventPublisher.publish(
                 new PaymentCanceledEvent(

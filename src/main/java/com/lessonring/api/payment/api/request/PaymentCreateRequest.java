@@ -54,4 +54,7 @@ public class PaymentCreateRequest {
     @NotNull
     @Schema(description = "이용권 종료일", example = "2026-04-18", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate membershipEndDate;
+
+    @Schema(description = "멱등 키", example = "PAYMENT_CREATE_MEMBER_1_20260324_001")
+    private String idempotencyKey;
 }
