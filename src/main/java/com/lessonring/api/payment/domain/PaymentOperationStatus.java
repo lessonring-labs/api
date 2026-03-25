@@ -1,6 +1,6 @@
 package com.lessonring.api.payment.domain;
 
-public enum OperationStatus {
+public enum PaymentOperationStatus {
     PROCESSING,
     SUCCEEDED,
     FAILED

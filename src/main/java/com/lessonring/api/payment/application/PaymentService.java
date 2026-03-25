@@ -13,7 +13,7 @@ import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.request.PaymentCreateRequest;
 import com.lessonring.api.payment.api.response.RefundResponse;
 import com.lessonring.api.payment.application.support.RequestHashGenerator;
-import com.lessonring.api.payment.domain.OperationType;
+import com.lessonring.api.payment.domain.PaymentOperationType;
 import com.lessonring.api.payment.domain.Payment;
 import com.lessonring.api.payment.domain.PaymentOperation;
 import com.lessonring.api.payment.domain.PaymentStatus;
@@ -240,7 +240,7 @@ public class PaymentService {
 
         PaymentOperationStartResult startResult = paymentOperationService.startOrGet(
                 payment.getId(),
-                OperationType.REFUND,
+                PaymentOperationType.REFUND,
                 idempotencyKey,
                 requestHash
         );

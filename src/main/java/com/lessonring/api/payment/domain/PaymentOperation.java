@@ -29,7 +29,7 @@ public class PaymentOperation extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "operation_type", nullable = false, length = 20)
-    private OperationType operationType;
+    private PaymentOperationType operationType;
 
     @Column(name = "idempotency_key", nullable = false, length = 100)
     private String idempotencyKey;
@@ -39,7 +39,7 @@ public class PaymentOperation extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private OperationStatus status;
+    private PaymentOperationStatus status;
 
     @Column(name = "provider_reference", length = 200)
     private String providerReference;
@@ -55,7 +55,7 @@ public class PaymentOperation extends BaseEntity {
 
     public static PaymentOperation create(
             Long paymentId,
-            OperationType operationType,
+            PaymentOperationType operationType,
             String idempotencyKey,
             String requestHash
     ) {
@@ -64,12 +64,12 @@ public class PaymentOperation extends BaseEntity {
         operation.operationType = operationType;
         operation.idempotencyKey = idempotencyKey;
         operation.requestHash = requestHash;
-        operation.status = OperationStatus.PROCESSING;
+        operation.status = PaymentOperationStatus.PROCESSING;
         return operation;
     }
 
     public void markSucceeded(String providerReference, String responsePayload) {
-        this.status = OperationStatus.SUCCEEDED;
+        this.status = PaymentOperationStatus.SUCCEEDED;
         this.providerReference = providerReference;
         this.responsePayload = responsePayload;
         this.errorCode = null;
@@ -77,20 +77,20 @@ public class PaymentOperation extends BaseEntity {
     }
 
     public void markFailed(String errorCode, String errorMessage) {
-        this.status = OperationStatus.FAILED;
+        this.status = PaymentOperationStatus.FAILED;
         this.errorCode = errorCode;
         this.errorMessage = errorMessage;
     }
 
     public boolean isProcessing() {
-        return this.status == OperationStatus.PROCESSING;
+        return this.status == PaymentOperationStatus.PROCESSING;
     }
 
     public boolean isSucceeded() {
-        return this.status == OperationStatus.SUCCEEDED;
+        return this.status == PaymentOperationStatus.SUCCEEDED;
     }
 
     public boolean isFailed() {
-        return this.status == OperationStatus.FAILED;
+        return this.status == PaymentOperationStatus.FAILED;
     }
 }

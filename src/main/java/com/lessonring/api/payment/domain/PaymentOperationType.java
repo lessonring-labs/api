@@ -1,6 +1,6 @@
 package com.lessonring.api.payment.domain;
 
-public enum OperationType {
+public enum PaymentOperationType {
     APPROVE,
     REFUND
 }

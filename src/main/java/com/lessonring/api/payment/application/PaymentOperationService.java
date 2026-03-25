@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.payment.api.response.RefundResponse;
-import com.lessonring.api.payment.domain.OperationType;
+import com.lessonring.api.payment.domain.PaymentOperationStatus;
+import com.lessonring.api.payment.domain.PaymentOperationType;
 import com.lessonring.api.payment.domain.PaymentOperation;
 import com.lessonring.api.payment.domain.repository.PaymentOperationRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class PaymentOperationService {
     @Transactional
     public PaymentOperationStartResult startOrGet(
             Long paymentId,
-            OperationType operationType,
+            PaymentOperationType operationType,
             String idempotencyKey,
             String requestHash
     ) {
@@ -35,7 +36,7 @@ public class PaymentOperationService {
                                 "동일 idempotency key로 다른 요청을 보낼 수 없습니다."
                         );
                     }
-                    return new PaymentOperationStartResult(existing, false);
+                    return new PaymentOperationStartResult(existing, existing.getStatus(), false);
                 })
                 .orElseGet(() -> {
                     PaymentOperation created = PaymentOperation.create(
@@ -46,6 +47,7 @@ public class PaymentOperationService {
                     );
                     return new PaymentOperationStartResult(
                             paymentOperationRepository.save(created),
+                            PaymentOperationStatus.PROCESSING,
                             true
                     );
                 });
