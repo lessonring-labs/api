@@ -1,39 +1,39 @@
 # 결제 교차 충돌 동시성 테스트 설계서
 
-## 1. 대상 정보
+## 1. 기본 정보
 
-- 테스트 파일: [PaymentCrossConflictConcurrencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java)
-- 대상 계층: 결제 승인/환불/웹훅 교차 충돌 처리
-- 테스트 유형: 통합 동시성 테스트
+| 항목 | 내용 |
+|-----|-----|
+| 대상 파일 | [PaymentCrossConflictConcurrencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java) |
+| 대상 계층 | 승인/환불/웹훅 간 교차 충돌 처리 |
+| 테스트 유형 | 통합 / 동시성 |
+| 주 우선순위 | P0 |
+| 관련 기능 | 승인 API, 환불 API, webhook 처리 경합 |
 
-## 2. 문서 목적
+## 2. 테스트 목적
 
-서로 다른 경로에서 동일 결제 상태를 변경하려고 할 때 중복 반영, 중복 membership 생성, 중복 webhook 처리 같은 문제가 발생하지 않는지 확인한다.
+동일 결제에 대해 서로 다른 경로가 동시에 상태를 변경하려 할 때 최종 상태가 하나로 수렴하고 중복 처리 부작용이 발생하지 않는지 확인한다.
 
-## 3. 검증 범위
+## 3. 핵심 위험
 
-- 승인 API와 completed webhook의 동시 충돌
-- 환불 API와 canceled webhook의 동시 충돌
-- webhook log 적재 정책
-- PG 호출 중복 방지
+- 승인 API와 webhook completed가 동시에 성공하여 membership이 중복 생성될 수 있다.
+- 환불 API와 webhook canceled가 동시에 성공하여 중복 취소 또는 중복 환불이 발생할 수 있다.
 
-## 4. 사전 조건
+## 4. 상세 테스트 케이스
 
-- 동일 결제에 대해 여러 스레드가 동시에 진입할 수 있는 테스트 환경이어야 한다.
-- 외부 PG 응답은 mock으로 제어 가능해야 한다.
+| ID | 우선순위 | 유형 | 시나리오 | 입력 조건 | 기대 결과 |
+|-----|-----|-----|-----|-----|-----|
+| PAY-CROSS-001 | P0 | 동시성 | 승인 API와 completed webhook 동시 진입 | 동일 payment, 동일 주문 | 최종 상태 `COMPLETED`, membership 1건, PG approve 1회 |
+| PAY-CROSS-002 | P0 | 동시성 | 환불 API와 canceled webhook 동시 진입 | 완료된 동일 결제 | 최종 상태 `CANCELED`, 이용권 `REFUNDED`, webhook log 기록 |
 
-## 5. 상세 테스트 케이스
+## 5. 판정 기준
 
-| ID | 시나리오 | 입력 조건 | 수행 절차 | 기대 결과 |
-|-----|-----|-----|-----|-----|
-| PAY-CROSS-001 | 승인 API와 completed webhook 동시 진입 | 동일 paymentId, 동일 주문 | 승인 스레드와 webhook 스레드 동시 실행 | 최종 상태 `COMPLETED`, membership 1건만 생성, PG 승인 1회 |
-| PAY-CROSS-002 | 환불 API와 canceled webhook 동시 진입 | 완료된 동일 결제 | 환불 스레드와 webhook 스레드 동시 실행 | 최종 상태 `CANCELED`, 이용권 `REFUNDED`, webhook log 정상 기록 |
+- 상태는 중복 반영되면 안 된다.
+- 후속 자원 생성 또는 변경은 1회만 일어나야 한다.
 
-## 6. 합격 기준
+## 6. 추적 포인트
 
-- 최종 상태가 중복 처리 없이 일관되어야 한다.
-- 동일 결제에 대해 승인 또는 환불이 이중 반영되면 실패다.
-
-## 7. 운영 관점 중요도
-
-매우 높음. 결제 API와 외부 PG 웹훅이 실제 운영에서 동시에 도착할 수 있기 때문이다.
+- membership 개수
+- payment 최종 상태
+- webhook 로그 존재 여부
+- PG 호출 횟수
