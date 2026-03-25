@@ -1,382 +1,357 @@
-# System Architecture
+# 시스템 아키텍처
 
-LessonRing Backend 시스템 아키텍처를 정의한다.
-
-이 문서는 다음 목적을 가진다.
-
-- 전체 시스템 구조 정의
-- Backend 아키텍처 설명
-- Infrastructure 구성 설명
-- 데이터 흐름 정의
-- 확장 아키텍처 방향 제시
+LessonRing Backend의 현재 시스템 아키텍처를 코드 기준으로 정리한 문서다.  
+기존 계획성 설명보다 실제 구현 상태를 우선하며, 2026-03 기준 코드베이스를 반영한다.
 
 ---
 
-# 1. System Overview
+## 1. 개요
 
-LessonRing은 필라테스 / 피트니스 스튜디오 운영을 위한 예약 및 회원 관리 플랫폼이다.
+LessonRing Backend는 레슨/스튜디오 운영을 위한 API 서버이며 다음 기능을 제공한다.
 
-핵심 기능
-
+- 인증 및 JWT 토큰 발급
 - 회원 관리
-- 스케줄 관리
+- 이용권 관리
+- 수업 일정 관리
 - 예약 관리
 - 출석 관리
-- 이용권 관리
-- 결제 관리
-- 알림
-- 운영 분석
+- 결제 승인/환불/웹훅 처리
+- 알림 조회 및 읽음 처리
+- 분석 API 확장 기반
 
-시스템은 **API 기반 Backend + Web Frontend 구조**로 설계된다.
-
----
-
-# 2. High Level Architecture
-
-전체 시스템 구조
-
-Client (Web / Mobile)
-↓
-API Gateway (Nginx)
-↓
-Backend API (Spring Boot)
-↓
-Database (PostgreSQL)
-
-추가 구성
-
-Redis (Cache / RateLimit)  
-Message Queue (Kafka 예정)  
-Monitoring (Scouter / Prometheus)  
-Analytics (Metabase)
+현재 시스템은 **Spring Boot 기반 모듈형 모놀리식(Modular Monolith)** 구조다.
 
 ---
 
-# 3. Backend Architecture
+## 2. 상위 구조
 
-Backend는 **Domain 중심 아키텍처**로 설계된다.
+현재 운영 관점의 상위 구조는 다음과 같다.
 
-구조
+```text
+Client
+  -> HTTP/JSON API
+Spring Boot Backend
+  -> PostgreSQL
+  -> Redis
+  -> Toss Payments
+```
 
-Controller
-↓
-Application Service
-↓
-Domain Model
-↓
-Repository
-↓
-Database
+구성 요소별 역할은 다음과 같다.
 
-핵심 원칙
+- Client: Web 또는 추후 Mobile 클라이언트
+- Spring Boot Backend: 인증, 도메인 로직, 트랜잭션, 외부 연동 처리
+- PostgreSQL: 주요 업무 데이터 저장소
+- Redis: 분산 락 및 상태 충돌 방지
+- Toss Payments: 결제 승인/취소/상태 검증
 
-- Domain 중심 설계
-- Layer 책임 분리
-- Domain Event 기반 확장
-- Stateless API
-
----
-
-# 4. Backend Module Structure
-
-Backend 주요 도메인
-
-auth  
-member  
-membership  
-schedule  
-booking  
-attendance  
-payment  
-notification
-
-공통 모듈
-
-common  
-security  
-config  
-event
+Nginx, Kubernetes, Kafka, 외부 메시징 파이프라인은 현재 코드에 핵심 런타임으로 포함되어 있지 않으며 일부는 향후 확장 대상으로 보는 것이 정확하다.
 
 ---
 
-# 5. Package Structure
+## 3. 애플리케이션 구조
 
-Backend 패키지 구조
+백엔드는 도메인 중심 계층 구조를 따른다.
 
-com.lessonring.api
-
-common  
-auth  
-member  
-membership  
-schedule  
-booking  
-attendance  
-payment  
-notification
-
-각 도메인 구조
-
-api  
-application  
-domain  
+```text
+api
+application
+domain
 infrastructure
+common
+```
+
+각 계층의 책임은 다음과 같다.
+
+- `api`: Controller, Request/Response DTO, HTTP 진입점
+- `application`: 유스케이스 조합, 트랜잭션, 도메인 간 오케스트레이션
+- `domain`: 엔티티, enum, 도메인 상태 전이, 저장소 인터페이스
+- `infrastructure`: DB 조회 구현, PG/Webhook 등 외부 연동
+- `common`: 보안, 예외, 응답 포맷, 이벤트, 락, 공통 설정
+
+현재 패키지 기준 주요 모듈은 다음과 같다.
+
+- `auth`
+- `studio`
+- `instructor`
+- `member`
+- `membership`
+- `schedule`
+- `booking`
+- `attendance`
+- `payment`
+- `notification`
+- `analytics`
+- `integration`
+- `common`
 
 ---
 
-# 6. API Architecture
+## 4. API 아키텍처
 
-API는 REST 기반 구조를 사용한다.
+모든 주요 API는 REST 스타일과 `/api/v1` 버전 prefix를 사용한다.
 
-API Version
+대표 엔드포인트:
 
-/api/v1
+- `/api/v1/auth`
+- `/api/v1/members`
+- `/api/v1/memberships`
+- `/api/v1/schedules`
+- `/api/v1/bookings`
+- `/api/v1/attendances`
+- `/api/v1/payments`
+- `/api/v1/payments/webhook`
+- `/api/v1/notifications`
+- `/api/v1/analytics`
 
-예시
+공통 응답 포맷은 `ApiResponse`를 사용한다.
 
-/api/v1/auth/login  
-/api/v1/schedules  
-/api/v1/bookings  
-/api/v1/memberships
+Swagger/OpenAPI 노출 경로:
 
----
-
-# 7. Authentication Architecture
-
-인증 방식
-
-JWT 기반 인증
-
-구성
-
-AccessToken  
-RefreshToken
-
-인증 흐름
-
-Client  
-→ Login API 호출  
-→ AccessToken 발급  
-→ API 요청 시 Authorization Header 사용
-
-Header 예시
-
-Authorization: Bearer {accessToken}
+- `/api-docs`
+- `/swagger-ui`
 
 ---
 
-# 8. Database Architecture
+## 5. 인증 및 보안 구조
 
-Primary Database
+인증은 **JWT 기반 Stateless 인증**이다.
 
-PostgreSQL
+구성 요소:
 
-선택 이유
+- Access Token
+- Refresh Token
+- `JwtAuthenticationFilter`
+- `SecurityConfig`
 
-- 안정성
-- 트랜잭션 지원
-- 확장성
-- 오픈소스
+보안 정책 요약:
 
-ORM
+- 인증이 필요한 API는 Bearer Token 사용
+- 로그인/토큰 재발급은 비인증 허용
+- Swagger 경로는 비인증 허용
+- 세션은 사용하지 않고 `STATELESS` 정책 적용
+- `Spring Security` 기반 필터 체인 사용
 
-Spring Data JPA
+현재 공개 허용 경로:
 
-Migration
-
-Flyway
-
----
-
-# 9. Cache Architecture
-
-Cache 시스템
-
-Redis (예정)
-
-사용 목적
-
-AccessToken blacklist  
-Rate Limiting  
-Session Cache  
-Hot Data Cache
+- `/api/v1/auth/login`
+- `/api/v1/auth/refresh`
+- `/swagger-ui/**`
+- `/api-docs/**`
+- `/v3/api-docs/**`
+- `/actuator/health`
 
 ---
 
-# 10. Event Architecture
+## 6. 데이터 저장 구조
 
-시스템은 Event Driven 구조 확장을 고려하여 설계된다.
+### 6.1 주 데이터 저장소
 
-예시 이벤트
+- PostgreSQL
+- Spring Data JPA
+- Hibernate
+- Querydsl
+- Flyway
 
-BookingCreatedEvent  
-BookingCanceledEvent  
-AttendanceMarkedEvent  
-PaymentCompletedEvent
+구현 특징:
 
-이벤트 처리 목적
+- `ddl-auto=validate`로 스키마 검증만 수행
+- Flyway로 스키마 버전 관리
+- JPA `open-in-view=false`
+- Hibernate JDBC timezone은 `Asia/Seoul`
 
-알림 처리  
-통계 처리  
-외부 시스템 연동
+주요 마이그레이션 범위:
 
----
+- 스튜디오, 강사, 회원, 이용권
+- 수업 일정, 예약, 출석
+- 결제, 알림, 리프레시 토큰
+- 결제 웹훅 로그, 결제 작업 이력
+- 제약조건 및 인덱스
 
-# 11. Messaging Architecture (Future)
+### 6.2 캐시/락 저장소
 
-향후 Message Queue 도입 가능
+- Redis
+- Redisson
 
-Kafka
+현재 Redis의 핵심 용도는 캐시보다 **분산 락**이다.
 
-사용 목적
+실제 구현 예:
 
-Notification Event  
-Analytics Event  
-External Integration
-
----
-
-# 12. Monitoring Architecture
-
-운영 모니터링 도구
-
-Application Monitoring
-
-Scouter / Prometheus
-
-Metrics
-
-CPU  
-Memory  
-API Response Time  
-Error Rate
+- 예약/결제 상태 충돌 방지
+- 동일 결제에 대한 승인/환불/웹훅 동시 처리 제어
 
 ---
 
-# 13. Logging Architecture
+## 7. 결제 아키텍처
 
-Logging 정책
+결제 모듈은 현재 시스템에서 가장 명확한 외부 연동 구조를 가진다.
 
-Application Log  
-Security Log  
-Error Log
+핵심 구성:
 
-로그 레벨
+- `PaymentService`: 결제 생성, 완료, 취소, 환불
+- `PaymentPgService`: PG 승인 처리
+- `PaymentWebhookService`: PG 웹훅 수신 처리
+- `PgClient` / `TossPaymentsClient`: PG 연동
+- `PaymentOperationService`: 승인/환불 멱등 처리
+- `PaymentStateLockManager`: 결제 단위 분산 락
 
-INFO  
-WARN  
-ERROR
+결제 처리 방식:
 
-Log Stack (확장 가능)
+1. 내부 결제 엔티티를 `READY` 상태로 생성한다.
+2. 승인 API 호출 시 PG 승인 요청을 보낸다.
+3. 승인 성공 시 이용권을 생성하고 결제를 `COMPLETED`로 전환한다.
+4. 환불 시 PG 취소 요청과 내부 상태 전이를 함께 처리한다.
+5. 웹훅 수신 시 PG 상태 검증 후 결제 상태를 동기화한다.
 
-ELK Stack  
-Loki
+보강 포인트:
 
----
-
-# 14. Deployment Architecture
-
-배포 구조
-
-Docker 기반 배포
-
-구성
-
-Backend Container  
-Database Container  
-Cache Container
-
-Orchestration
-
-Kubernetes (향후)
+- `PaymentOperation`으로 승인/환불 멱등성 보장
+- `PaymentWebhookEvent`, `PaymentWebhookLog`로 웹훅 중복/처리 추적
+- `RedisLockManager` 기반 결제 상태 동시성 제어
 
 ---
 
-# 15. CI/CD Architecture
+## 8. 이벤트 아키텍처
 
-CI/CD Pipeline
+현재는 내부 애플리케이션 이벤트 기반 구조다.
 
-GitHub  
-↓
-GitHub Actions  
-↓
-Docker Build  
-↓
-Container Registry  
-↓
-Server Deploy
+구성 요소:
 
----
+- `DomainEvent`
+- `DomainEventPublisher`
+- `@EventListener` 기반 핸들러
 
-# 16. Scalability Strategy
+현재 사용 중인 주요 도메인 이벤트:
 
-확장 전략
+- `BookingCreatedEvent`
+- `BookingCanceledEvent`
+- `MembershipUsedEvent`
+- `PaymentCompletedEvent`
+- `PaymentCanceledEvent`
 
-Stateless Backend  
-Horizontal Scaling  
-Cache Layer 추가  
-Message Queue 도입
+대표 소비자:
 
----
+- `NotificationEventHandler`
 
-# 17. Availability Strategy
+현재 이벤트는 주로 다음 용도로 사용된다.
 
-가용성 확보 전략
+- 예약/결제/이용권 사용 시 알림 엔티티 생성
+- 도메인 간 직접 결합 완화
 
-Health Check  
-Container Restart  
-Load Balancer 사용
+Kafka producer 패키지가 일부 존재하지만, 현재 `build.gradle` 기준으로 Kafka 런타임 의존성은 핵심 구성에 포함되어 있지 않다. 따라서 현재 문서에서는 내부 이벤트 중심 구조로 보는 것이 맞다.
 
 ---
 
-# 18. Security Layer
+## 9. 도메인 간 상호작용 구조
 
-보안 구성
+주요 업무 흐름은 다음과 같이 연결된다.
 
-Spring Security  
-JWT Authentication  
-HTTPS  
-CORS 정책
+### 9.1 예약 흐름
+
+```text
+Member
+  -> Membership 검증
+  -> Schedule 검증
+  -> Booking 생성
+  -> BookingCreatedEvent 발행
+  -> Notification 생성
+```
+
+### 9.2 출석 흐름
+
+```text
+Booking 확인
+  -> Membership 차감
+  -> Booking 상태 ATTENDED 변경
+  -> Attendance 생성
+  -> MembershipUsedEvent 발행
+  -> Notification 생성
+```
+
+### 9.3 결제 흐름
+
+```text
+Payment 생성(READY)
+  -> PG 승인
+  -> Membership 생성
+  -> Payment COMPLETED
+  -> PaymentCompletedEvent 발행
+  -> Notification 생성
+```
+
+### 9.4 환불 흐름
+
+```text
+Payment COMPLETED 확인
+  -> PG 취소
+  -> 미래 예약 일괄 취소
+  -> Membership REFUNDED
+  -> Payment 상태 변경
+  -> PaymentCanceledEvent 발행
+```
 
 ---
 
-# 19. Future Architecture
+## 10. 운영/관찰 가능성
 
-향후 확장 구조
+현재 코드 기준 운영 지원 요소는 다음과 같다.
 
-API Gateway  
-Microservice 분리  
-Event Driven Architecture 강화  
-Data Analytics Pipeline 구축
+- Swagger/OpenAPI 문서화
+- 전역 예외 처리(`GlobalExceptionHandler`)
+- 공통 에러 코드(`ErrorCode`)
+- 웹훅/결제 작업 이력 저장
+- `actuator/health` 헬스 체크 허용
 
----
+반면 다음 항목은 문서화된 계획 또는 패키지 흔적은 있으나, 현재 핵심 런타임으로 완성된 상태라고 보긴 어렵다.
 
-# 20. Architecture Principles
-
-LessonRing 아키텍처 설계 원칙
-
-Domain 중심 설계  
-Stateless API  
-Event 기반 확장  
-확장 가능한 인프라 구조
+- Prometheus/Scouter 기반 모니터링
+- ELK/Loki 기반 로그 파이프라인
+- Kafka 기반 비동기 메시징
+- Kubernetes 기반 배포 오케스트레이션
 
 ---
 
-# 21. Summary
+## 11. 배포 관점 정리
 
-LessonRing 시스템은 다음 구조로 설계된다.
+현재 코드에서 강하게 전제되는 실행 환경은 다음과 같다.
 
-Frontend Client  
-↓  
-API Server (Spring Boot)  
-↓  
-PostgreSQL Database
+- Java 21
+- Spring Boot 3.5.9
+- PostgreSQL
+- Redis
+- 환경변수 기반 설정 주입
 
-확장 구성
+프로파일 구조:
 
-Redis  
-Kafka  
-Monitoring  
-Analytics
+- `application.yml`: 공통 설정
+- `application-local.yml`: 로컬 개발
+- `application-dev.yml`: 개발 서버
 
-이 구조는 향후 서비스 확장을 고려하여 설계된 아키텍처이다.
+기본 프로파일은 `local`이다.
+
+---
+
+## 12. 현재 아키텍처 판단
+
+현재 LessonRing Backend는 다음과 같이 요약할 수 있다.
+
+- 구조: 도메인 중심 모듈형 모놀리식
+- 인터페이스: REST API + JWT 인증
+- 저장소: PostgreSQL + Redis
+- 외부 연동: Toss Payments, Webhook
+- 내부 통신: Spring 애플리케이션 이벤트
+- 데이터 일관성 보강: 분산 락 + 멱등 키 + 작업 이력 테이블
+
+즉, 이 시스템은 단순 CRUD 백엔드가 아니라 **예약/출석/결제 상태 전이와 동시성 제어를 포함한 운영형 백엔드**로 보는 것이 맞다.
+
+---
+
+## 13. 향후 확장 방향
+
+현재 구조를 기준으로 자연스러운 확장 방향은 다음과 같다.
+
+- 외부 알림 채널 연동(SMS, 카카오, 푸시)
+- Analytics API 구체화
+- Kafka 기반 비동기 이벤트 분리
+- 스튜디오 기준 멀티 테넌시 강화
+- 결제/예약 배치 및 운영성 지표 고도화
+- 배포 파이프라인과 관측 도구 정식 도입
