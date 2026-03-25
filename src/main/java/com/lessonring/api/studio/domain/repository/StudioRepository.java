@@ -1,14 +1,7 @@
 package com.lessonring.api.studio.domain.repository;
 
 import com.lessonring.api.studio.domain.Studio;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface StudioRepository {
-
-    Optional<Studio> findById(Long id);
-
-    Studio save(Studio studio);
-
-    List<Studio> findAll();
+public interface StudioRepository extends JpaRepository<Studio, Long> {
 }

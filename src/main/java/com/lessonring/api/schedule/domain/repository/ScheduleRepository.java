@@ -1,14 +1,7 @@
 package com.lessonring.api.schedule.domain.repository;
 
 import com.lessonring.api.schedule.domain.Schedule;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ScheduleRepository {
-
-    Schedule save(Schedule schedule);
-
-    Optional<Schedule> findById(Long id);
-
-    List<Schedule> findAll();
+public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 }

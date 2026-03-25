@@ -5,4 +5,6 @@ public interface PgClient {
     PgApproveResponse approve(PgApproveRequest request);
 
     PgCancelResponse cancel(PgCancelRequest request);
+
+    PgPaymentStatusResponse getPayment(String paymentKey);
 }

@@ -33,3 +33,7 @@ pg:
   toss:
     base-url: ${PG_TOSS_BASE_URL:https://api.tosspayments.com}
     secret-key: ${PG_TOSS_SECRET_KEY:test_sk_xxxxx}
+
+payment:
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET:your-webhook-secret}

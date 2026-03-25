@@ -2,15 +2,13 @@ package com.lessonring.api.notification.domain.repository;
 
 import com.lessonring.api.notification.domain.Notification;
 import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface NotificationRepository {
+public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-    Notification save(Notification notification);
+    default List<Notification> findAllByMemberId(Long memberId) {
+        return findAllByMemberIdOrderByIdDesc(memberId);
+    }
 
-    Optional<Notification> findById(Long id);
-
-    List<Notification> findAll();
-
-    List<Notification> findAllByMemberId(Long memberId);
+    List<Notification> findAllByMemberIdOrderByIdDesc(Long memberId);
 }

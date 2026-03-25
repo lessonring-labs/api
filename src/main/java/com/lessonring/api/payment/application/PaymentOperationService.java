@@ -4,11 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.common.error.ErrorCode;
-import com.lessonring.api.payment.api.response.RefundResponse;
+import com.lessonring.api.payment.domain.PaymentOperation;
 import com.lessonring.api.payment.domain.PaymentOperationStatus;
 import com.lessonring.api.payment.domain.PaymentOperationType;
-import com.lessonring.api.payment.domain.PaymentOperation;
 import com.lessonring.api.payment.domain.repository.PaymentOperationRepository;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,10 +27,12 @@ public class PaymentOperationService {
             String idempotencyKey,
             String requestHash
     ) {
+        validateStartOrGet(paymentId, operationType, idempotencyKey, requestHash);
+
         return paymentOperationRepository
                 .findByPaymentIdAndOperationTypeAndIdempotencyKey(paymentId, operationType, idempotencyKey)
                 .map(existing -> {
-                    if (!existing.getRequestHash().equals(requestHash)) {
+                    if (!Objects.equals(existing.getRequestHash(), requestHash)) {
                         throw new BusinessException(
                                 ErrorCode.INVALID_REQUEST,
                                 "동일 idempotency key로 다른 요청을 보낼 수 없습니다."
@@ -53,15 +55,29 @@ public class PaymentOperationService {
                 });
     }
 
-    public RefundResponse restoreRefundResponse(PaymentOperation operation) {
+    @Transactional
+    public void markSuccess(
+            PaymentOperation operation,
+            String providerReference,
+            String responsePayload
+    ) {
+        operation.markSucceeded(providerReference, responsePayload);
+    }
+
+    @Transactional
+    public void markFailed(PaymentOperation operation, ErrorCode errorCode, String errorMessage) {
+        operation.markFailed(errorCode.name(), errorMessage);
+    }
+
+    public <T> T restoreResponse(PaymentOperation operation, Class<T> responseType) {
         if (operation.getResponsePayload() == null || operation.getResponsePayload().isBlank()) {
-            throw new IllegalStateException("저장된 환불 응답이 없습니다.");
+            throw new IllegalStateException("저장된 응답이 없습니다.");
         }
 
         try {
-            return objectMapper.readValue(operation.getResponsePayload(), RefundResponse.class);
+            return objectMapper.readValue(operation.getResponsePayload(), responseType);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("저장된 환불 응답 복원에 실패했습니다.", e);
+            throw new IllegalStateException("저장된 응답 복원에 실패했습니다.", e);
         }
     }
 
@@ -70,6 +86,19 @@ public class PaymentOperationService {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("응답 직렬화에 실패했습니다.", e);
+        }
+    }
+
+    private void validateStartOrGet(
+            Long paymentId,
+            PaymentOperationType operationType,
+            String idempotencyKey,
+            String requestHash
+    ) {
+        if (paymentId == null || operationType == null ||
+                idempotencyKey == null || idempotencyKey.isBlank() ||
+                requestHash == null || requestHash.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "payment operation 요청 값이 올바르지 않습니다.");
         }
     }
 }

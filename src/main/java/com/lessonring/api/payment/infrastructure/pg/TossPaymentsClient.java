@@ -90,6 +90,11 @@ public class TossPaymentsClient implements PgClient {
         }
     }
 
+    @Override
+    public PgPaymentStatusResponse getPayment(String paymentKey) {
+        return null;
+    }
+
     private String basicAuth(String secretKey) {
         String value = secretKey + ":";
         return "Basic " + Base64.getEncoder().encodeToString(value.getBytes(StandardCharsets.UTF_8));

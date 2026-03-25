@@ -2,13 +2,9 @@ package com.lessonring.api.membership.domain.repository;
 
 import com.lessonring.api.membership.domain.Membership;
 import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface MembershipRepository {
-
-    Membership save(Membership membership);
-
-    Optional<Membership> findById(Long id);
+public interface MembershipRepository extends JpaRepository<Membership, Long> {
 
     List<Membership> findAllByMemberId(Long memberId);
 }

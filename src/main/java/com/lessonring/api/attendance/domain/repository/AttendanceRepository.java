@@ -1,18 +1,9 @@
 package com.lessonring.api.attendance.domain.repository;
 
 import com.lessonring.api.attendance.domain.Attendance;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface AttendanceRepository {
-
-    Attendance save(Attendance attendance);
-
-    Optional<Attendance> findById(Long id);
-
-    List<Attendance> findAll();
+public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     boolean existsByBookingId(Long bookingId);
-
-    void delete(Attendance attendance);
 }
