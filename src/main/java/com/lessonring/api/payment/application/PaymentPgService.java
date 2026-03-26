@@ -18,10 +18,14 @@ import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgApproveRequest;
 import com.lessonring.api.payment.infrastructure.pg.PgApproveResponse;
 import com.lessonring.api.payment.infrastructure.pg.PgClient;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Slf4j
 @Service
@@ -32,19 +36,20 @@ public class PaymentPgService {
     private final MembershipRepository membershipRepository;
     private final PgClient pgClient;
     private final DomainEventPublisher domainEventPublisher;
+    private final EntityManager entityManager;
 
     private final PaymentOperationService paymentOperationService;
     private final ApproveRequestHashGenerator approveRequestHashGenerator;
     private final PaymentStateLockManager paymentStateLockManager;
 
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public PaymentApproveResponse approve(
             Long paymentId,
             PaymentApproveRequest request,
             String idempotencyKey
     ) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+        log.info("payment approve requested. paymentId={}, orderId={}, idempotencyKey={}",
+                paymentId, request.getOrderId(), idempotencyKey);
 
         String requestHash = approveRequestHashGenerator.generate(
                 paymentId,
@@ -69,20 +74,39 @@ public class PaymentPgService {
         }
 
         if (operationResult.status() == PaymentOperationStatus.PROCESSING && !operationResult.newlyCreated()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 처리 중인 approve 요청입니다.");
+            log.warn("payment approve already in progress. paymentId={}, idempotencyKey={}",
+                    paymentId, idempotencyKey);
+            throw new BusinessException(ErrorCode.PAYMENT_APPROVE_IN_PROGRESS, "이미 처리 중인 approve 요청입니다.");
         }
 
         boolean locked = false;
+        boolean unlockDeferred = false;
 
         try {
             locked = paymentStateLockManager.tryLock(paymentId);
 
             if (!locked) {
-                throw new BusinessException(ErrorCode.INVALID_REQUEST, "결제 승인 처리 락 획득에 실패했습니다.");
+                log.warn("payment approve lock acquisition failed. paymentId={}, idempotencyKey={}",
+                        paymentId, idempotencyKey);
+                throw new BusinessException(ErrorCode.PAYMENT_LOCK_ACQUISITION_FAILED, "결제 승인 처리 락 획득에 실패했습니다.");
+            }
+
+            log.info("payment approve lock acquired. paymentId={}, idempotencyKey={}",
+                    paymentId, idempotencyKey);
+
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCompletion(int status) {
+                        paymentStateLockManager.unlock(paymentId);
+                    }
+                });
+                unlockDeferred = true;
             }
 
             Payment lockedPayment = paymentRepository.findById(paymentId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+            entityManager.refresh(lockedPayment, LockModeType.PESSIMISTIC_WRITE);
 
             validateApprovable(lockedPayment, request);
 
@@ -96,6 +120,8 @@ public class PaymentPgService {
 
             if (!pgResponse.isSuccess()) {
                 lockedPayment.fail(pgResponse.getFailureReason(), pgResponse.getRawResponse());
+                log.warn("payment approve failed by pg. paymentId={}, orderId={}, reason={}",
+                        paymentId, request.getOrderId(), pgResponse.getFailureReason());
 
                 throw new BusinessException(ErrorCode.INVALID_REQUEST, "PG 승인에 실패했습니다.");
             }
@@ -141,10 +167,15 @@ public class PaymentPgService {
                     paymentOperationService.toJson(response)
             );
 
+            log.info("payment approve succeeded. paymentId={}, membershipId={}, paymentKey={}",
+                    paymentId, savedMembership.getId(), pgResponse.getPaymentKey());
+
             return response;
 
         } catch (BusinessException e) {
             paymentOperationService.markFailed(operation, e.getErrorCode(), e.getMessage());
+            log.warn("payment approve failed. paymentId={}, errorCode={}, message={}",
+                    paymentId, e.getErrorCode().name(), e.getMessage());
             throw e;
         } catch (Exception e) {
             paymentOperationService.markFailed(
@@ -152,10 +183,13 @@ public class PaymentPgService {
                     ErrorCode.INTERNAL_SERVER_ERROR,
                     e.getMessage() == null ? "approve 처리 중 알 수 없는 오류가 발생했습니다." : e.getMessage()
             );
+            log.error("payment approve failed by unexpected error. paymentId={}", paymentId, e);
             throw e;
         } finally {
-            if (locked) {
+            if (locked && !unlockDeferred) {
                 paymentStateLockManager.unlock(paymentId);
+                log.info("payment approve lock released. paymentId={}, idempotencyKey={}",
+                        paymentId, idempotencyKey);
             }
         }
     }
@@ -166,6 +200,10 @@ public class PaymentPgService {
     }
 
     private void validateApprovable(Payment payment, PaymentApproveRequest request) {
+        if (payment.getStatus() == PaymentStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.PAYMENT_APPROVE_ALREADY_COMPLETED, "이미 완료된 결제입니다.");
+        }
+
         if (payment.getStatus() != PaymentStatus.READY) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "READY 상태의 결제만 승인할 수 있습니다.");
         }

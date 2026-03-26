@@ -23,17 +23,21 @@ import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgCancelRequest;
 import com.lessonring.api.payment.infrastructure.pg.PgCancelResponse;
 import com.lessonring.api.payment.infrastructure.pg.PgClient;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -42,6 +46,7 @@ public class PaymentService {
     private final MemberRepository memberRepository;
     private final MembershipRepository membershipRepository;
     private final BookingRepository bookingRepository;
+    private final EntityManager entityManager;
 
     private final DomainEventPublisher domainEventPublisher;
     private final PgClient pgClient;
@@ -156,8 +161,10 @@ public class PaymentService {
         return refund(id, "refund:legacy:" + id);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public RefundResponse refund(Long id, String idempotencyKey) {
+        log.info("payment refund requested. paymentId={}, idempotencyKey={}", id, idempotencyKey);
+
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "Idempotency-Key는 필수입니다.");
         }
@@ -182,6 +189,8 @@ public class PaymentService {
 
         if (!startResult.isNewlyCreated()) {
             if (operation.isSucceeded()) {
+                log.info("payment refund idempotent hit. paymentId={}, operationId={}",
+                        id, operation.getId());
                 return paymentOperationService.restoreResponse(operation, RefundResponse.class);
             }
 
@@ -196,8 +205,13 @@ public class PaymentService {
         try {
             locked = paymentStateLockManager.tryLock(payment.getId(), 3, TimeUnit.SECONDS);
             if (!locked) {
-                throw new BusinessException(ErrorCode.INVALID_REQUEST, "이미 다른 환불 요청이 처리 중입니다.");
+                log.warn("payment refund lock acquisition failed. paymentId={}, idempotencyKey={}",
+                        id, idempotencyKey);
+                throw new BusinessException(ErrorCode.PAYMENT_LOCK_ACQUISITION_FAILED, "이미 다른 환불 요청이 처리 중입니다.");
             }
+
+            log.info("payment refund lock acquired. paymentId={}, idempotencyKey={}",
+                    id, idempotencyKey);
 
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 Long paymentId = payment.getId();
@@ -210,8 +224,7 @@ public class PaymentService {
                 unlockDeferred = true;
             }
 
-            payment = paymentRepository.findById(id)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+            entityManager.refresh(payment, LockModeType.PESSIMISTIC_WRITE);
 
             if (payment.getStatus() != PaymentStatus.COMPLETED) {
                 throw new BusinessException(ErrorCode.PAYMENT_REFUND_NOT_ALLOWED, "완료된 결제만 환불할 수 있습니다.");
@@ -239,6 +252,8 @@ public class PaymentService {
             );
 
             if (!pgResponse.isSuccess()) {
+                log.warn("payment refund pg cancel failed. paymentId={}, paymentKey={}, reason={}",
+                        id, payment.getPgPaymentKey(), pgResponse.getFailureReason());
                 throw new BusinessException(ErrorCode.PG_CANCEL_FAILED, "PG 결제 취소에 실패했습니다.");
             }
 
@@ -282,10 +297,15 @@ public class PaymentService {
                     paymentOperationService.toJson(response)
             );
 
+            log.info("payment refund succeeded. paymentId={}, membershipId={}, refundAmount={}, canceledBookings={}",
+                    id, payment.getMembershipId(), refundAmount, canceledBookingCount);
+
             return response;
 
         } catch (BusinessException e) {
             paymentOperationService.markFailed(operation, e.getErrorCode(), e.getMessage());
+            log.warn("payment refund failed. paymentId={}, errorCode={}, message={}",
+                    id, e.getErrorCode().name(), e.getMessage());
             throw e;
         } catch (Exception e) {
             paymentOperationService.markFailed(
@@ -293,10 +313,13 @@ public class PaymentService {
                     ErrorCode.INTERNAL_SERVER_ERROR,
                     e.getMessage() == null ? "refund 처리 중 알 수 없는 오류가 발생했습니다." : e.getMessage()
             );
+            log.error("payment refund failed by unexpected error. paymentId={}", id, e);
             throw e;
         } finally {
             if (locked && !unlockDeferred) {
                 paymentStateLockManager.unlock(payment.getId());
+                log.info("payment refund lock released. paymentId={}, idempotencyKey={}",
+                        id, idempotencyKey);
             }
         }
     }

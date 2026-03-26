@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 생성 멱등성 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentServiceIdempotencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentServiceIdempotencyTest.java) |
+| 기준 테스트 파일 | [PaymentServiceIdempotencyTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentServiceIdempotencyTest.java) |
 | 모듈 | 결제 생성 |
 | 테스트 유형 | 단위 |
 | 우선순위 | P0 |
@@ -62,3 +62,11 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `create_should_return_existing_payment_when_idempotency_key_exists` | 같은 idempotencyKey로 결제 생성 요청이 들어오면 기존 Payment를 반환한다 | `PAY-CREATE-IDEMP-QA-001` |
+| `create_should_create_new_payment_when_idempotency_key_is_absent` | idempotencyKey가 없으면 새로운 Payment를 생성한다 | `PAY-CREATE-IDEMP-QA-002` |
+| `create_should_create_new_payment_when_idempotency_key_is_new` | 새로운 idempotencyKey이면 새로운 Payment를 생성한다 | `PAY-CREATE-IDEMP-QA-003` |

@@ -5,8 +5,9 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 테스트 외부 연동 목 설정 참고 문서 |
-| 기준 파일 | [TestExternalMockConfig.java](/C:/wms/api/src/test/java/com/lessonring/api/support/TestExternalMockConfig.java) |
+| 기준 파일 | [`TestExternalMockConfig.java`](../../../src/test/java/com/lessonring/api/support/TestExternalMockConfig.java) |
 | 문서 유형 | 참고 |
+| 현재 상태 | 사용 중 |
 
 ## 2. 문서 목적
 
@@ -17,8 +18,10 @@ QA가 결제 관련 통합 테스트가 실 PG 서버 호출 없이 실행된다
 - `PgClient`를 mock bean으로 등록한다.
 - 결제 승인/환불/webhook 통합 테스트에서 외부 네트워크 의존성을 제거한다.
 - 테스트별로 성공/실패 응답을 재현 가능하게 만든다.
+- 따라서 결제 관련 통합 테스트 실패는 외부 PG 장애보다 내부 로직 또는 테스트 데이터 문제일 가능성이 높다.
 
 ## 4. QA 확인 포인트
 
 - 테스트 실패 원인이 외부 PG 장애가 아닌 내부 로직일 수 있음을 구분해야 한다.
 - 이 설정은 실계약 검증이 아니라 테스트 안정화 목적이다.
+- 실 PG 계약 검증은 별도 샌드박스 또는 계약 테스트가 필요하다.

@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 웹훅 재전송 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentWebhookReplayTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentWebhookReplayTest.java) |
+| 기준 테스트 파일 | [PaymentWebhookReplayTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentWebhookReplayTest.java) |
 | 모듈 | 결제 웹훅 |
 | 테스트 유형 | 통합 |
 | 우선순위 | P0 |
@@ -76,3 +76,12 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `duplicated_transmission_id_is_ignored` | 동일 transmissionId 재전송이면 두 번째 요청은 무시된다 | `PAY-WEBHOOK-REPLAY-QA-001` |
+| `replay_without_transmission_id_completed_is_skipped_by_status` | transmissionId 없이 동일 completed webhook 재전송되면 상태는 한 번만 반영되고 두 번째는 skip 된다 | `PAY-WEBHOOK-REPLAY-QA-002` |
+| `replay_without_transmission_id_canceled_is_skipped_by_status` | transmissionId 없이 동일 canceled webhook 재전송되면 상태는 한 번만 반영되고 두 번째는 skip 된다 | `PAY-WEBHOOK-REPLAY-QA-003` |
+| `same_transmission_id_with_different_payload_is_ignored_by_current_policy` | 동일 transmissionId 이지만 payload가 달라도 현재 정책상 두 번째 요청은 무시된다 | `PAY-WEBHOOK-REPLAY-QA-004` |

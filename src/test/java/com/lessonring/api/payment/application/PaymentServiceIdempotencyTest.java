@@ -10,6 +10,7 @@ import com.lessonring.api.payment.api.request.PaymentCreateRequest;
 import com.lessonring.api.payment.domain.Payment;
 import com.lessonring.api.payment.domain.PaymentMethod;
 import com.lessonring.api.payment.domain.repository.PaymentRepository;
+import jakarta.persistence.EntityManager;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -40,6 +41,9 @@ class PaymentServiceIdempotencyTest {
 
     @Mock
     private com.lessonring.api.payment.infrastructure.pg.PgClient pgClient;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private PaymentService paymentService;

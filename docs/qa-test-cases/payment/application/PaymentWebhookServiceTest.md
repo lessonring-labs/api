@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 웹훅 서비스 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentWebhookServiceTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentWebhookServiceTest.java) |
+| 기준 테스트 파일 | [PaymentWebhookServiceTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentWebhookServiceTest.java) |
 | 모듈 | 결제 웹훅 |
 | 테스트 유형 | 단위 |
 | 우선순위 | P0 |
@@ -146,3 +146,17 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `handle_completed_webhook_success` | completed webhook updates payment to completed | `PAY-WEBHOOK-QA-001` |
+| `handle_failed_webhook_success` | failed webhook updates payment to failed | `PAY-WEBHOOK-QA-002` |
+| `handle_canceled_webhook_success` | canceled webhook updates payment to canceled | `PAY-WEBHOOK-QA-003` |
+| `handle_webhook_fail_when_order_id_missing` | missing orderId throws business exception | `PAY-WEBHOOK-QA-004` |
+| `handle_webhook_ignore_unknown_event_type` | unknown eventType is ignored | `PAY-WEBHOOK-QA-005` |
+| `handle_completed_webhook_should_ignore_when_already_completed` | already completed payment ignores completed webhook | `PAY-WEBHOOK-QA-006` |
+| `handle_canceled_webhook_should_ignore_when_already_canceled` | already canceled payment ignores canceled webhook | `PAY-WEBHOOK-QA-007` |
+| `handle_failed_webhook_should_ignore_when_already_failed` | already failed payment ignores failed webhook | `PAY-WEBHOOK-QA-008` |
+| `handle_should_ignore_when_same_transmission_id_already_processed` | duplicate transmissionId is ignored | `PAY-WEBHOOK-QA-009` |

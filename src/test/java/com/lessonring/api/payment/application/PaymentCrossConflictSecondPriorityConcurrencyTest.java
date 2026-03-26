@@ -26,11 +26,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 
 @SpringBootTest
@@ -56,7 +58,15 @@ class PaymentCrossConflictSecondPriorityConcurrencyTest {
     private PgClient pgClient;
 
     @Autowired
+    @MockBean
     private PaymentWebhookPgVerificationService paymentWebhookPgVerificationService;
+
+    @BeforeEach
+    void setUp() {
+        paymentWebhookLogRepository.deleteAll();
+        paymentRepository.deleteAll();
+        Mockito.reset(pgClient, paymentWebhookPgVerificationService);
+    }
 
     @AfterEach
     void tearDown() {

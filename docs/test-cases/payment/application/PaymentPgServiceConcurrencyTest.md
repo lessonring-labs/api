@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [PaymentPgServiceConcurrencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceConcurrencyTest.java) |
+| 대상 파일 | [PaymentPgServiceConcurrencyTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceConcurrencyTest.java) |
 | 대상 계층 | 결제 승인 서비스 |
 | 테스트 유형 | 통합 / 동시성 |
 | 주 우선순위 | P0 |
@@ -26,3 +26,10 @@
 - `PaymentOperation` 상태가 정책대로 저장되어야 한다.
 - membership 중복 생성 시 실패다.
 - 외부 PG 호출 2회 이상이면 실패다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `approve_concurrent_with_different_idempotency_keys_only_one_succeeds` | 서로 다른 idempotencyKey로 동일 payment 동시 approve 시 1건만 완료된다 | `PAY-APP-CON-001` |
+| `approve_concurrent_with_same_idempotency_key_calls_pg_once` | 동일 idempotencyKey로 동일 payment 동시 approve 시 최종 1건만 처리되고 PG 호출은 1회다 | `PAY-APP-CON-002` |

@@ -116,3 +116,13 @@ CREATE INDEX IF NOT EXISTS idx_refresh_token_expires_at
 
 -- V12: payment_operation
 -- Unique index is created in V12__create_payment_operation.sql.
+
+-- V13: payment_webhook_event
+CREATE INDEX IF NOT EXISTS idx_payment_webhook_event_payment_key
+    ON payment_webhook_event (payment_key);
+
+CREATE INDEX IF NOT EXISTS idx_payment_webhook_event_event_type
+    ON payment_webhook_event (event_type);
+
+CREATE INDEX IF NOT EXISTS idx_payment_webhook_event_status
+    ON payment_webhook_event (status);

@@ -236,6 +236,22 @@ create table if not exists payment_operation (
     constraint uq_payment_operation_key unique (payment_id, operation_type, idempotency_key)
 );
 
+-- payment_webhook_event
+create table if not exists payment_webhook_event (
+    id bigserial primary key,
+    event_id varchar(100) not null,
+    payment_key varchar(100),
+    event_type varchar(50) not null,
+    payload_hash varchar(64) not null,
+    status varchar(20) not null,
+    raw_payload text,
+    error_code varchar(100),
+    error_message varchar(500),
+    received_at timestamp not null,
+    processed_at timestamp,
+    constraint uq_payment_webhook_event_event_id unique (event_id)
+);
+
 -- =========================================================
 -- Indexes and unique indexes
 -- =========================================================
@@ -314,6 +330,16 @@ create unique index if not exists uq_payment_idempotency_key
 
 create index if not exists idx_payment_pg_payment_key
     on payment (pg_payment_key);
+
+-- payment_webhook_event
+create index if not exists idx_payment_webhook_event_payment_key
+    on payment_webhook_event (payment_key);
+
+create index if not exists idx_payment_webhook_event_event_type
+    on payment_webhook_event (event_type);
+
+create index if not exists idx_payment_webhook_event_status
+    on payment_webhook_event (status);
 
 -- notification
 create index if not exists idx_notification_member_id

@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 2순위 충돌 동시성 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentCrossConflictSecondPriorityConcurrencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictSecondPriorityConcurrencyTest.java) |
+| 기준 테스트 파일 | [PaymentCrossConflictSecondPriorityConcurrencyTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictSecondPriorityConcurrencyTest.java) |
 | 모듈 | 결제 |
 | 테스트 유형 | 동시성 |
 | 우선순위 | P0 |
@@ -62,3 +62,11 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `approve_vs_refund` | approve API 와 refund API 동시 진입 시 READY 상태에서는 refund가 이기지 못한다 | `PAY-PRIORITY-QA-001` |
+| `webhook_completed_vs_webhook_canceled_pg_completed_wins` | webhook completed 와 webhook canceled 동시 진입 시 PG 조회 결과가 completed면 최종 COMPLETED | `PAY-PRIORITY-QA-002` |
+| `webhook_completed_vs_webhook_canceled_pg_canceled_wins` | webhook completed 와 webhook canceled 동시 진입 시 PG 조회 결과가 canceled면 최종 CANCELED | `PAY-PRIORITY-QA-003` |

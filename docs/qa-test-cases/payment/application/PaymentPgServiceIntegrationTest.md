@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 승인 통합 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentPgServiceIntegrationTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceIntegrationTest.java) |
+| 기준 테스트 파일 | [PaymentPgServiceIntegrationTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceIntegrationTest.java) |
 | 모듈 | 결제 승인 |
 | 테스트 유형 | 통합 |
 | 우선순위 | P0 |
@@ -105,3 +105,14 @@
 | 수행 버전 |  |
 | 환경 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `approve_success` | 정상 approve 성공 | `PAY-APP-INT-QA-001` |
+| `approve_idempotent_hit_returns_stored_response` | 동일 idempotencyKey + 동일 요청이면 기존 응답 재사용 | `PAY-APP-INT-QA-002` |
+| `approve_same_idempotency_key_but_different_payload_throws` | 동일 idempotencyKey + 다른 요청이면 예외 | `PAY-APP-INT-QA-003` |
+| `approve_fails_when_payment_is_not_ready` | READY 상태가 아니면 승인 실패 | `PAY-APP-INT-QA-004` |
+| `approve_pg_failure_marks_operation_failed` | PG 실패면 operation FAILED 기록 | `PAY-APP-INT-QA-005` |
+| `approve_fails_when_lock_not_acquired` | 락 획득 실패면 승인 실패 | `PAY-APP-INT-QA-006` |

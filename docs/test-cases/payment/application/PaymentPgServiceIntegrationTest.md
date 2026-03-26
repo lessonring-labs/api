@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [PaymentPgServiceIntegrationTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceIntegrationTest.java) |
+| 대상 파일 | [PaymentPgServiceIntegrationTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceIntegrationTest.java) |
 | 대상 계층 | 결제 승인 애플리케이션 서비스 |
 | 테스트 유형 | 통합 |
 | 주 우선순위 | P0 |
@@ -36,3 +36,14 @@
 - 승인 성공 시 membership이 반드시 1건 생성되어야 한다.
 - 실패 시 operation 상태와 payment 상태가 일치해야 한다.
 - 멱등성 위반 시 예외 없이 중복 처리되면 실패다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `approve_success` | 정상 approve 성공 | `PAY-APP-INT-001` |
+| `approve_idempotent_hit_returns_stored_response` | 동일 idempotencyKey + 동일 요청이면 기존 응답 재사용 | `PAY-APP-INT-002` |
+| `approve_same_idempotency_key_but_different_payload_throws` | 동일 idempotencyKey + 다른 요청이면 예외 | `PAY-APP-INT-003` |
+| `approve_fails_when_payment_is_not_ready` | READY 상태가 아니면 승인 실패 | `PAY-APP-INT-004` |
+| `approve_pg_failure_marks_operation_failed` | PG 실패면 operation FAILED 기록 | `PAY-APP-INT-005` |
+| `approve_fails_when_lock_not_acquired` | 락 획득 실패면 승인 실패 | `PAY-APP-INT-006` |

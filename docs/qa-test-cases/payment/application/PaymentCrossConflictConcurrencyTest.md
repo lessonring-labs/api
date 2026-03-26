@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 교차 충돌 동시성 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentCrossConflictConcurrencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java) |
+| 기준 테스트 파일 | [PaymentCrossConflictConcurrencyTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java) |
 | 모듈 | 결제 |
 | 테스트 유형 | 동시성 |
 | 우선순위 | P0 |
@@ -48,3 +48,10 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `approve_vs_webhook_completed` | approve API 와 webhook completed 동시 진입 시 최종 COMPLETED 1회만 반영된다 | `PAY-CROSS-QA-001` |
+| `refund_vs_webhook_canceled` | refund API 와 webhook canceled 동시 진입 시 최종 CANCELED 1회만 반영된다 | `PAY-CROSS-QA-002` |

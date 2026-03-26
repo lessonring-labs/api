@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [PaymentControllerTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/api/PaymentControllerTest.java) |
+| 대상 파일 | [PaymentControllerTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/api/PaymentControllerTest.java) |
 | 대상 계층 | 결제 승인 API 컨트롤러 |
 | 테스트 유형 | API |
 | 주 우선순위 | P1 |
@@ -44,3 +44,11 @@
 
 - 필수값 누락은 서비스 계층 진입 전에 차단되어야 한다.
 - 성공 시 응답 포맷이 표준 API 응답 규격과 일치해야 한다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `approve_success` | 결제 승인 요청이 성공하면 200 응답을 반환한다 | `PAY-CTRL-001` |
+| `approve_validation_fail_paymentKey_blank` | 결제 승인 요청 시 paymentKey가 없으면 validation 에러가 발생한다 | `PAY-CTRL-002` |
+| `approve_validation_fail_amount_null` | 결제 승인 요청 시 amount가 없으면 validation 에러가 발생한다 | `PAY-CTRL-003` |

@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | LessonRing 요구사항 정의서 |
-| 문서 버전 | v1.0 |
+| 문서 버전 | v1.1 |
 | 기준일 | 2026-03-25 |
 | 작성 목적 | LessonRing 서비스의 업무 요구사항, 기능 요구사항, 비기능 요구사항을 정의하고 개발/QA/운영의 공통 기준으로 사용 |
 | 대상 시스템 | LessonRing Backend API, Admin Web, 사용자 Web/Mobile 연계 시스템 |
@@ -275,14 +275,26 @@ LessonRing은 다음 구성 요소를 포함한다.
 
 - 완료된 결제는 정책에 따라 환불 처리할 수 있어야 한다.
 - 환불 시 이용권과 예약 상태가 함께 반영되어야 한다.
+- 환불 시 미래 `RESERVED` 예약은 자동 취소되어야 한다.
 
 #### FR-PAYMENT-006 결제 상태 관리
 
-- 시스템은 결제 상태를 `READY`, `COMPLETED`, `FAILED`, `CANCELED`, `REFUNDED` 등으로 관리해야 한다.
+- 시스템은 결제 상태를 `READY`, `COMPLETED`, `FAILED`, `CANCELED`로 관리해야 한다.
+- 환불 완료는 결제 상태 `CANCELED`와 이용권 상태 `REFUNDED`의 조합으로 표현할 수 있어야 한다.
 
 #### FR-PAYMENT-007 결제 멱등성
 
 - 동일한 결제 요청 또는 승인 요청이 반복될 경우 멱등성 기준으로 중복 처리를 방지해야 한다.
+
+#### FR-PAYMENT-008 결제 작업 이력 관리
+
+- 승인과 환불 요청은 `payment_operation` 단위로 기록 가능해야 한다.
+- 동일 `payment_id`, `operation_type`, `idempotency_key` 조합은 유일해야 한다.
+
+#### FR-PAYMENT-009 결제 상태 변경 경쟁 제어
+
+- 동일 결제에 대한 승인, 환불, webhook 상태 변경은 동시에 성공하지 않아야 한다.
+- 락과 DB 상태 재조회 기준으로 최종 상태 일관성을 보장해야 한다.
 
 ---
 
@@ -303,6 +315,11 @@ LessonRing은 다음 구성 요소를 포함한다.
 #### FR-WEBHOOK-004 webhook 기반 상태 동기화
 
 - 시스템은 webhook 이벤트를 기준으로 결제 상태를 동기화할 수 있어야 한다.
+
+#### FR-WEBHOOK-005 webhook 후속 반영
+
+- `PAYMENT_COMPLETED` webhook 처리 시 내부 이용권이 없으면 생성되어야 한다.
+- `PAYMENT_CANCELED` webhook 처리 시 연결된 이용권이 있으면 환불 상태로 반영되어야 한다.
 
 ---
 
@@ -345,6 +362,7 @@ LessonRing은 다음 구성 요소를 포함한다.
 - 결제, 예약, 환불, 이용권 차감은 정합성 우선으로 처리되어야 한다.
 - 동일 요청이 중복 처리되어서는 안 된다.
 - 상태 전이 결과는 데이터베이스 기준으로 일관되어야 한다.
+- 승인, 환불, webhook 경합 시 최종 상태는 1회만 확정되어야 한다.
 
 ### 10.2 성능
 
@@ -371,6 +389,7 @@ LessonRing은 다음 구성 요소를 포함한다.
 
 - 핵심 도메인은 자동화 테스트가 가능해야 한다.
 - 결제, 환불, webhook, 멱등성, 동시성은 회귀 테스트 대상이어야 한다.
+- 로컬 개발 환경에서 `./gradlew test` 기준 전체 회귀 확인이 가능해야 한다.
 
 ### 10.7 확장성
 
@@ -410,12 +429,14 @@ LessonRing은 다음 구성 요소를 포함한다.
 - RefreshToken
 - PaymentWebhookLog
 - PaymentOperation
+- PaymentWebhookEvent
 
 ### 12.2 데이터 보존 요구
 
 - 결제 및 환불 이력은 추적 가능해야 한다.
 - webhook 수신 로그는 중복 판정과 감사 용도로 유지되어야 한다.
 - 운영상 중요한 상태 변경 이력은 유실되지 않아야 한다.
+- 승인/환불 멱등성 판단을 위한 operation 기록이 유지되어야 한다.
 
 ---
 
@@ -437,6 +458,7 @@ LessonRing은 다음 구성 요소를 포함한다.
 
 - 동일 transmission 재전송은 중복 처리되지 않아야 한다.
 - 상태가 이미 반영된 webhook는 재반영되지 않아야 한다.
+- completed 와 canceled 간 충돌 시 PG 검증 결과와 현재 상태를 기준으로 단일 상태만 유지해야 한다.
 
 ---
 
@@ -484,6 +506,7 @@ LessonRing은 다음 구성 요소를 포함한다.
 - 결제 및 환불 관련 중복 처리 오류가 발생하지 않아야 한다.
 - webhook 재전송으로 상태가 잘못 반영되지 않아야 한다.
 - 운영자가 문제 발생 시 대상 회원, 결제, 예약 이력을 추적할 수 있어야 한다.
+- 전체 자동화 테스트가 회귀 기준선으로 유지되어야 한다.
 
 ### 17.3 운영 성공 기준
 
@@ -505,17 +528,28 @@ LessonRing은 다음 구성 요소를 포함한다.
 
 ## 19. 관련 문서
 
-- [README.md](/C:/wms/api/README.md)
-- [system-architecture.md](/C:/wms/api/docs/architecture/system-architecture.md)
-- [domain-architecture.md](/C:/wms/api/docs/architecture/domain-architecture.md)
-- [backend-technology-stack-2026.md](/C:/wms/api/docs/architecture/backend-technology-stack-2026.md)
-- [frontend-technology-stack-2026.md](/C:/wms/api/docs/architecture/frontend-technology-stack-2026.md)
-- [vision-and-metrics.md](/C:/wms/api/docs/development/vision-and-metrics.md)
-- [project-roadmap.md](/C:/wms/api/docs/development/project-roadmap.md)
+- [`../README.md`](../README.md)
+- [`../architecture/system-architecture.md`](../architecture/system-architecture.md)
+- [`../architecture/domain-architecture.md`](../architecture/domain-architecture.md)
+- [`../architecture/backend-technology-stack-2026.md`](../architecture/backend-technology-stack-2026.md)
+- [`../architecture/frontend-technology-stack-2026.md`](../architecture/frontend-technology-stack-2026.md)
+- [`../development/vision-and-metrics.md`](../development/vision-and-metrics.md)
+- [`../development/project-roadmap.md`](../development/project-roadmap.md)
+- [`../test-cases/README.md`](../test-cases/README.md)
+- [`../qa-test-cases/README.md`](../qa-test-cases/README.md)
 
 ---
 
-## 20. 결론
+## 20. 현재 구현 기준 보충 메모
+
+- 결제 승인과 환불은 `payment_operation` 멱등성 기록을 사용한다.
+- 결제 상태 충돌은 Redis 기반 상태 락과 DB 재조회로 제어한다.
+- webhook 처리 후 completed 는 이용권 생성, canceled 는 이용권 환불까지 내부 상태를 동기화한다.
+- 2026-03-25 기준 자동화 테스트는 전체 통과 상태다.
+
+---
+
+## 21. 결론
 
 LessonRing의 핵심 요구사항은 단순 기능 제공이 아니라, 회원, 이용권, 일정, 예약, 출석, 결제의 운영 흐름을 하나의 정합성 있는 시스템으로 연결하는 데 있다.
 

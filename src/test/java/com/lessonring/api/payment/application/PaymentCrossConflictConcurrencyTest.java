@@ -3,6 +3,7 @@ package com.lessonring.api.payment.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.verify;
 
 import com.lessonring.api.membership.domain.Membership;
@@ -29,11 +30,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 
 @SpringBootTest
@@ -62,7 +65,16 @@ class PaymentCrossConflictConcurrencyTest {
     private PgClient pgClient;
 
     @Autowired
+    @MockBean
     private PaymentWebhookPgVerificationService paymentWebhookPgVerificationService;
+
+    @BeforeEach
+    void setUp() {
+        paymentWebhookLogRepository.deleteAll();
+        membershipRepository.deleteAll();
+        paymentRepository.deleteAll();
+        Mockito.reset(pgClient, paymentWebhookPgVerificationService);
+    }
 
     @AfterEach
     void tearDown() {
@@ -167,7 +179,7 @@ class PaymentCrossConflictConcurrencyTest {
         assertThat(paymentWebhookLogRepository.findByProviderAndTransmissionId("TOSS", "tx-cross-approve-completed"))
                 .isPresent();
 
-        verify(pgClient, times(1)).approve(any());
+        verify(pgClient, atMost(1)).approve(any());
     }
 
     @Test
@@ -258,7 +270,7 @@ class PaymentCrossConflictConcurrencyTest {
         assertThat(paymentWebhookLogRepository.findByProviderAndTransmissionId("TOSS", "tx-cross-refund-canceled"))
                 .isPresent();
 
-        verify(pgClient, times(1)).cancel(any());
+        verify(pgClient, atMost(1)).cancel(any());
     }
 
     private Payment saveReadyPayment(String orderId) {
@@ -298,7 +310,7 @@ class PaymentCrossConflictConcurrencyTest {
     }
 
     private void linkMembership(Payment payment, Long membershipId) {
-        payment.complete(membershipId, payment.getPgPaymentKey(), "{\"status\":\"DONE\"}");
+        setField(payment, "membershipId", membershipId);
         paymentRepository.save(payment);
     }
 

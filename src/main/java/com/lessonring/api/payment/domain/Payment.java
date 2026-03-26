@@ -234,6 +234,14 @@ public class Payment extends BaseEntity {
         }
     }
 
+    public void linkMembership(Long membershipId) {
+        if (this.status != PaymentStatus.COMPLETED) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "완료된 결제에만 이용권을 연결할 수 있습니다.");
+        }
+
+        this.membershipId = membershipId;
+    }
+
     public void syncFailedFromWebhook(String failedReason, String pgRawResponse) {
         if (this.status == PaymentStatus.COMPLETED
                 || this.status == PaymentStatus.CANCELED

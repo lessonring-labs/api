@@ -26,21 +26,21 @@ public class PaymentWebhookSignatureVerifier {
         String expectedSignature = generateSignature(timestamp, rawBody);
 
         if (!safeEquals(expectedSignature, signature)) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "유효하지 않은 webhook signature 입니다.");
+            throw new BusinessException(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE, "유효하지 않은 webhook signature 입니다.");
         }
     }
 
     private void validateHeaders(String signature, String timestamp, String rawBody) {
         if (signature == null || signature.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "webhook signature 헤더가 없습니다.");
+            throw new BusinessException(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE, "webhook signature 헤더가 없습니다.");
         }
 
         if (timestamp == null || timestamp.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "webhook timestamp 헤더가 없습니다.");
+            throw new BusinessException(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE, "webhook timestamp 헤더가 없습니다.");
         }
 
         if (rawBody == null || rawBody.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "webhook body가 비어 있습니다.");
+            throw new BusinessException(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE, "webhook body가 비어 있습니다.");
         }
     }
 
@@ -50,14 +50,14 @@ public class PaymentWebhookSignatureVerifier {
         try {
             requestEpochSecond = Long.parseLong(timestamp);
         } catch (NumberFormatException e) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "webhook timestamp 형식이 올바르지 않습니다.");
+            throw new BusinessException(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE, "webhook timestamp 형식이 올바르지 않습니다.");
         }
 
         long now = Instant.now().getEpochSecond();
         long diff = Math.abs(now - requestEpochSecond);
 
         if (diff > ALLOWED_SKEW_SECONDS) {
-            throw new BusinessException(ErrorCode.INVALID_REQUEST, "허용 범위를 초과한 webhook timestamp 입니다.");
+            throw new BusinessException(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE, "허용 범위를 초과한 webhook timestamp 입니다.");
         }
     }
 

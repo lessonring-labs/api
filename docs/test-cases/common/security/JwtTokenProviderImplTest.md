@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [JwtTokenProviderImplTest.java](/C:/wms/api/src/test/java/com/lessonring/api/common/security/JwtTokenProviderImplTest.java) |
+| 대상 파일 | [JwtTokenProviderImplTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/common/security/JwtTokenProviderImplTest.java) |
 | 대상 계층 | JWT 보안 유틸리티 |
 | 테스트 유형 | 보안 / 단위 |
 | 주 우선순위 | P1 |
@@ -50,3 +50,11 @@ JWT 시크릿 입력 포맷이 달라도 초기화 로직이 정상 동작하고
 ## 7. 잔여 리스크
 
 - 만료 토큰, 잘못된 서명 토큰, 손상된 토큰 검증 케이스는 현재 문서 범위 밖이다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | 설명 | 문서 케이스 |
+|-----|-----|-----|
+| `initSupportsRawTextSecret` | 일반 문자열 secret 초기화 지원 | `JWT-001` |
+| `initSupportsBase64Secret` | Base64 secret 초기화 지원 | `JWT-002` |
+| `initSupportsBase64UrlSecret` | Base64 URL secret 초기화 지원 | `JWT-003` |

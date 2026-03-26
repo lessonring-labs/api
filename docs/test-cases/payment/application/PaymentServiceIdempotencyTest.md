@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [PaymentServiceIdempotencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentServiceIdempotencyTest.java) |
+| 대상 파일 | [PaymentServiceIdempotencyTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentServiceIdempotencyTest.java) |
 | 대상 계층 | 결제 생성 서비스 |
 | 테스트 유형 | 단위 |
 | 주 우선순위 | P0 |
@@ -25,3 +25,11 @@
 ## 4. 판정 기준
 
 - 기존 키 재사용 시 새 결제가 생성되면 실패다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `create_should_return_existing_payment_when_idempotency_key_exists` | 같은 idempotencyKey로 결제 생성 요청이 들어오면 기존 Payment를 반환한다 | `PAY-CREATE-IDEMP-001` |
+| `create_should_create_new_payment_when_idempotency_key_is_absent` | idempotencyKey가 없으면 새로운 Payment를 생성한다 | `PAY-CREATE-IDEMP-002` |
+| `create_should_create_new_payment_when_idempotency_key_is_new` | 새로운 idempotencyKey이면 새로운 Payment를 생성한다 | `PAY-CREATE-IDEMP-003` |

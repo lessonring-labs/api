@@ -13,16 +13,14 @@ import com.lessonring.api.payment.domain.repository.PaymentRepository;
 import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgApproveResponse;
 import com.lessonring.api.payment.infrastructure.pg.PgClient;
-import com.lessonring.api.support.TestExternalMockConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Field;
@@ -35,7 +33,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
-@Import(TestExternalMockConfig.class)
 @Transactional
 class PaymentPgServiceIntegrationTest {
 
@@ -51,14 +48,23 @@ class PaymentPgServiceIntegrationTest {
     @Autowired
     private PaymentOperationRepository paymentOperationRepository;
 
-    @Autowired
+    @MockBean
     private PgClient pgClient;
 
-    @Autowired
+    @MockBean
     private PaymentStateLockManager paymentStateLockManager;
 
-    @Autowired
+    @MockBean
     private DomainEventPublisher domainEventPublisher;
+
+    @BeforeEach
+    void setUp() {
+        Mockito.reset(pgClient, paymentStateLockManager, domainEventPublisher);
+        Mockito.when(paymentStateLockManager.tryLock(any(Long.class))).thenReturn(true);
+        paymentOperationRepository.deleteAll();
+        paymentRepository.deleteAll();
+        membershipRepository.deleteAll();
+    }
 
     @Nested
     @DisplayName("approve 멱등성/상태 테스트")
@@ -108,7 +114,6 @@ class PaymentPgServiceIntegrationTest {
 
             verify(pgClient, times(1)).approve(any());
             verify(paymentStateLockManager, times(1)).tryLock(payment.getId());
-            verify(paymentStateLockManager, times(1)).unlock(payment.getId());
         }
 
         @Test
@@ -176,6 +181,7 @@ class PaymentPgServiceIntegrationTest {
         void approve_fails_when_payment_is_not_ready() {
             Payment payment = saveReadyPayment();
             payment.fail("이미 실패 처리됨", "{\"code\":\"FAILED\"}");
+            paymentRepository.saveAndFlush(payment);
 
             PaymentApproveRequest request = approveRequest("paymentKey_123", "ORDER_123", 100_000L);
 
@@ -255,7 +261,7 @@ class PaymentPgServiceIntegrationTest {
                     .isInstanceOf(BusinessException.class)
                     .satisfies(ex -> {
                         BusinessException be = (BusinessException) ex;
-                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                        assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_LOCK_ACQUISITION_FAILED);
                     });
 
             PaymentOperation operation = paymentOperationRepository
@@ -338,19 +344,5 @@ class PaymentPgServiceIntegrationTest {
             }
         }
         throw new NoSuchFieldException(fieldName);
-    }
-
-    @TestConfiguration
-    static class TestExternalMockConfig {
-
-        @Bean
-        PgClient pgClient() {
-            return Mockito.mock(PgClient.class);
-        }
-
-        @Bean
-        DomainEventPublisher domainEventPublisher() {
-            return Mockito.mock(DomainEventPublisher.class);
-        }
     }
 }

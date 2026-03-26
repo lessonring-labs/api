@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.common.error.ErrorCode;
+import com.lessonring.api.membership.domain.Membership;
+import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.request.PaymentWebhookRequest;
 import com.lessonring.api.payment.domain.Payment;
 import com.lessonring.api.payment.domain.PaymentStatus;
@@ -12,6 +14,8 @@ import com.lessonring.api.payment.domain.repository.PaymentRepository;
 import com.lessonring.api.payment.domain.repository.PaymentWebhookLogRepository;
 import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgPaymentStatusResponse;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +33,8 @@ public class PaymentWebhookService {
     private static final long WEBHOOK_LOCK_TIMEOUT_SECONDS = 3L;
 
     private final PaymentRepository paymentRepository;
+    private final MembershipRepository membershipRepository;
+    private final EntityManager entityManager;
     private final PaymentWebhookLogRepository paymentWebhookLogRepository;
     private final PaymentStateLockManager paymentStateLockManager;
     private final PaymentWebhookPgVerificationService paymentWebhookPgVerificationService;
@@ -41,6 +47,12 @@ public class PaymentWebhookService {
             String rawBody,
             PaymentWebhookRequest request
     ) {
+        log.info("payment webhook requested. provider={}, transmissionId={}, eventType={}, orderId={}",
+                PROVIDER,
+                transmissionId,
+                request != null ? request.getEventType() : null,
+                request != null ? request.getOrderId() : null);
+
         validateRequest(request);
 
         if (isDuplicatedTransmission(transmissionId)) {
@@ -68,11 +80,16 @@ public class PaymentWebhookService {
             );
 
             if (!locked) {
+                log.warn("payment webhook lock acquisition failed. provider={}, transmissionId={}, orderId={}, eventType={}",
+                        PROVIDER, transmissionId, request.getOrderId(), request.getEventType());
                 throw new BusinessException(
-                        ErrorCode.INVALID_REQUEST,
+                        ErrorCode.PAYMENT_LOCK_ACQUISITION_FAILED,
                         "이미 다른 결제 상태 변경 요청이 처리 중입니다."
                 );
             }
+
+            log.info("payment webhook lock acquired. provider={}, transmissionId={}, paymentId={}, eventType={}",
+                    PROVIDER, transmissionId, payment.getId(), request.getEventType());
 
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 Long paymentId = payment.getId();
@@ -85,8 +102,8 @@ public class PaymentWebhookService {
                 unlockDeferred = true;
             }
 
-            Payment lockedPayment = paymentRepository.findById(payment.getId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
+            entityManager.refresh(payment, LockModeType.PESSIMISTIC_WRITE);
+            Payment lockedPayment = payment;
 
             switch (request.getEventType()) {
                 case "PAYMENT_COMPLETED" -> handleCompleted(lockedPayment, request);
@@ -124,9 +141,28 @@ public class PaymentWebhookService {
                     transmissionId
             );
 
+        } catch (BusinessException e) {
+            log.warn("payment webhook failed. provider={}, transmissionId={}, eventType={}, orderId={}, errorCode={}, message={}",
+                    PROVIDER,
+                    transmissionId,
+                    request.getEventType(),
+                    request.getOrderId(),
+                    e.getErrorCode().name(),
+                    e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("payment webhook failed by unexpected error. provider={}, transmissionId={}, eventType={}, orderId={}",
+                    PROVIDER,
+                    transmissionId,
+                    request.getEventType(),
+                    request.getOrderId(),
+                    e);
+            throw e;
         } finally {
             if (locked && !unlockDeferred) {
                 paymentStateLockManager.unlock(payment.getId());
+                log.info("payment webhook lock released. provider={}, transmissionId={}, paymentId={}",
+                        PROVIDER, transmissionId, payment.getId());
             }
         }
     }
@@ -155,6 +191,8 @@ public class PaymentWebhookService {
                 request.getPaymentKey(),
                 pgResponse.getRawResponse() != null ? pgResponse.getRawResponse() : request.getRawResponse()
         );
+
+        createMembershipIfNeeded(payment);
     }
 
     private void handleFailed(Payment payment, PaymentWebhookRequest request) {
@@ -210,6 +248,40 @@ public class PaymentWebhookService {
         payment.syncCanceledFromWebhook(
                 pgResponse.getRawResponse() != null ? pgResponse.getRawResponse() : request.getRawResponse()
         );
+
+        refundMembershipIfNeeded(payment);
+    }
+
+    private void refundMembershipIfNeeded(Payment payment) {
+        if (payment.getMembershipId() == null) {
+            return;
+        }
+
+        Membership membership = membershipRepository.findById(payment.getMembershipId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBERSHIP_NOT_FOUND));
+
+        if (!membership.isRefunded()) {
+            membership.refund();
+        }
+    }
+
+    private void createMembershipIfNeeded(Payment payment) {
+        if (payment.getMembershipId() != null) {
+            return;
+        }
+
+        Membership membership = Membership.create(
+                payment.getStudioId(),
+                payment.getMemberId(),
+                payment.getMembershipName(),
+                payment.getMembershipType(),
+                payment.getMembershipTotalCount(),
+                payment.getMembershipStartDate(),
+                payment.getMembershipEndDate()
+        );
+
+        Membership savedMembership = membershipRepository.save(membership);
+        payment.linkMembership(savedMembership.getId());
     }
 
     private void validateRequest(PaymentWebhookRequest request) {

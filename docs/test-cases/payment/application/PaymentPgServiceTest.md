@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [PaymentPgServiceTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceTest.java) |
+| 대상 파일 | [PaymentPgServiceTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentPgServiceTest.java) |
 | 대상 계층 | 결제 승인 서비스 |
 | 테스트 유형 | 단위 |
 | 주 우선순위 | P1 |
@@ -27,3 +27,13 @@
 ## 4. 판정 기준
 
 - 각 상태 분기에서 설계된 결과와 다르면 실패다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `approve_success` | PG 승인 성공 시 결제가 완료되고 이용권이 생성된다 | `PAY-APP-UNIT-001` |
+| `approve_fail_when_pg_fails` | PG 승인 실패 시 결제는 FAILED 상태가 된다 | `PAY-APP-UNIT-002` |
+| `approve_fail_when_payment_not_ready` | READY 상태가 아닌 결제는 승인할 수 없다 | `PAY-APP-UNIT-003` |
+| `approve_fail_when_payment_already_completed` | 이미 COMPLETED 상태인 결제는 재승인할 수 없다 | `PAY-APP-UNIT-004` |
+| `approve_fail_when_payment_already_failed` | 이미 FAILED 상태인 결제는 재승인할 수 없다 | `PAY-APP-UNIT-005` |

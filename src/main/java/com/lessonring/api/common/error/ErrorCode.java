@@ -84,6 +84,11 @@ public enum ErrorCode {
     PAYMENT_ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "P002", "이미 취소된 결제입니다."),
     PAYMENT_REFUND_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "P003", "환불할 수 없는 결제입니다."),
     PG_CANCEL_FAILED(HttpStatus.BAD_REQUEST, "P004", "PG 결제 취소에 실패했습니다."),
+    PAYMENT_APPROVE_IN_PROGRESS(HttpStatus.CONFLICT, "P005", "이미 처리 중인 결제 승인 요청입니다."),
+    PAYMENT_APPROVE_ALREADY_COMPLETED(HttpStatus.CONFLICT, "P006", "이미 완료된 결제입니다."),
+    PAYMENT_LOCK_ACQUISITION_FAILED(HttpStatus.CONFLICT, "P007", "결제 처리 락 획득에 실패했습니다."),
+    PAYMENT_WEBHOOK_INVALID_SIGNATURE(HttpStatus.BAD_REQUEST, "P008", "유효하지 않은 결제 webhook 서명입니다."),
+    PAYMENT_WEBHOOK_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "P009", "결제 webhook PG 검증에 실패했습니다."),
 
     /**
      * =========================

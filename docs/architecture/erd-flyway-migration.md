@@ -7,8 +7,8 @@
 
 ## Current Migration Rule
 
-- `V1` to `V12`: 테이블 생성 및 스키마 정의
-- `V13`: 인덱스와 제약조건만 관리
+- `V1` to `V13`: 테이블 생성 및 스키마 정의
+- `V14`: 인덱스와 제약조건만 관리
 
 현재 정리된 migration 순서:
 
@@ -24,13 +24,15 @@
 10. `V10__create_refresh_token.sql`
 11. `V11__create_payment_webhook_log.sql`
 12. `V12__create_payment_operation.sql`
-13. `V13__add_constraints_and_indexes.sql`
+13. `V13__create_payment_webhook_event.sql`
+14. `V14__add_constraints_and_indexes.sql`
 
 정리 원칙:
 
 - `payment` 관련 후속 컬럼 추가는 `V8__create_payment.sql`에 흡수
 - `payment_webhook_log` 관련 후속 변경은 `V11__create_payment_webhook_log.sql`에 흡수
-- 공통 인덱스와 unique 제약은 `V13__add_constraints_and_indexes.sql`에 모음
+- `payment_webhook_event` 생성은 `V13__create_payment_webhook_event.sql`에서 관리
+- 공통 인덱스와 보조 인덱스는 `V14__add_constraints_and_indexes.sql`에 모음
 
 ## Baseline Init Schema
 
@@ -43,7 +45,7 @@ src/main/resources/db/baseline/V1__init_schema.sql
 용도:
 
 - 새 데이터베이스를 처음부터 한 번에 구성할 때 사용
-- 현재 `V1`부터 `V13`까지의 migration 결과를 압축한 초기 스키마 초안
+- 현재 `V1`부터 `V14`까지의 migration 결과를 압축한 초기 스키마 초안
 
 주의:
 
@@ -68,14 +70,15 @@ baseline 파일은 아래 테이블을 포함한다.
 - `refresh_token`
 - `payment_webhook_log`
 - `payment_operation`
+- `payment_webhook_event`
 
-또한 현재 `V13` 기준의 주요 인덱스와 제약을 함께 포함한다.
+또한 현재 `V14` 기준의 주요 인덱스와 제약을 함께 포함한다.
 
 ## Recommended Use
 
 1. 신규 개발 환경이나 신규 DB 생성 시:
    `baseline/V1__init_schema.sql` 사용 가능
 2. 기존 Flyway 이력이 있는 환경:
-   `migration/V1`부터 `migration/V13`까지 그대로 유지
+   `migration/V1`부터 `migration/V14`까지 그대로 유지
 3. 운영 환경 재정리:
    baseline 전환 여부를 먼저 결정한 뒤 별도 migration 전략 수립

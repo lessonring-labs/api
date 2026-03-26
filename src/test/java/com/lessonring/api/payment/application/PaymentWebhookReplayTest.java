@@ -6,6 +6,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.lessonring.api.payment.api.request.PaymentWebhookRequest;
+import com.lessonring.api.membership.domain.Membership;
+import com.lessonring.api.membership.domain.MembershipType;
+import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.domain.Payment;
 import com.lessonring.api.payment.domain.PaymentMethod;
 import com.lessonring.api.payment.domain.PaymentStatus;
@@ -16,11 +19,13 @@ import com.lessonring.api.support.TestExternalMockConfig;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 
 @SpringBootTest
@@ -34,14 +39,27 @@ class PaymentWebhookReplayTest {
     private PaymentRepository paymentRepository;
 
     @Autowired
+    private MembershipRepository membershipRepository;
+
+    @Autowired
     private PaymentWebhookLogRepository paymentWebhookLogRepository;
 
     @Autowired
+    @MockBean
     private PaymentWebhookPgVerificationService paymentWebhookPgVerificationService;
+
+    @BeforeEach
+    void setUp() {
+        paymentWebhookLogRepository.deleteAll();
+        membershipRepository.deleteAll();
+        paymentRepository.deleteAll();
+        Mockito.reset(paymentWebhookPgVerificationService);
+    }
 
     @AfterEach
     void tearDown() {
         paymentWebhookLogRepository.deleteAll();
+        membershipRepository.deleteAll();
         paymentRepository.deleteAll();
         Mockito.reset(paymentWebhookPgVerificationService);
     }
@@ -259,7 +277,7 @@ class PaymentWebhookReplayTest {
                 PaymentMethod.CARD,
                 100_000L,
                 "10회권",
-                com.lessonring.api.membership.domain.MembershipType.COUNT,
+                MembershipType.COUNT,
                 10,
                 LocalDate.now(),
                 LocalDate.now().plusDays(30)
@@ -271,6 +289,16 @@ class PaymentWebhookReplayTest {
     private Payment saveCompletedPayment(String orderId, String paymentKey) {
         Payment payment = saveReadyPayment(orderId);
         payment.syncCompletedFromWebhook(paymentKey, "{\"status\":\"DONE\"}");
+        Membership membership = membershipRepository.save(Membership.create(
+                payment.getStudioId(),
+                payment.getMemberId(),
+                payment.getMembershipName(),
+                payment.getMembershipType(),
+                payment.getMembershipTotalCount(),
+                payment.getMembershipStartDate(),
+                payment.getMembershipEndDate()
+        ));
+        payment.linkMembership(membership.getId());
         return paymentRepository.save(payment);
     }
 

@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 컨트롤러 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentControllerTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/api/PaymentControllerTest.java) |
+| 기준 테스트 파일 | [PaymentControllerTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/api/PaymentControllerTest.java) |
 | 모듈 | 결제 |
 | 테스트 유형 | API |
 | 우선순위 | P1 |
@@ -62,3 +62,11 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `approve_success` | 결제 승인 요청이 성공하면 200 응답을 반환한다 | `PAY-CTRL-QA-001` |
+| `approve_validation_fail_paymentKey_blank` | 결제 승인 요청 시 paymentKey가 없으면 validation 에러가 발생한다 | `PAY-CTRL-QA-002` |
+| `approve_validation_fail_amount_null` | 결제 승인 요청 시 amount가 없으면 validation 에러가 발생한다 | `PAY-CTRL-QA-003` |

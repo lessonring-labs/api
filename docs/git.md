@@ -181,7 +181,8 @@
 - `V10__create_refresh_token.sql`
 - `V11__create_payment_webhook_log.sql`
 - `V12__create_payment_operation.sql`
-- `V13__add_constraints_and_indexes.sql`
+- `V13__create_payment_webhook_event.sql`
+- `V14__add_constraints_and_indexes.sql`
 
 주의:
 

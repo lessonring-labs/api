@@ -2,82 +2,86 @@
 
 ## 1. 문서 목적
 
-본 디렉터리는 `src/test/java` 하위 자동화 테스트를 기준으로 작성한 테스트 케이스 설계 문서 모음이다.
+본 디렉터리는 `src/test/java` 하위 자동화 테스트를 현재 구현 기준으로 설명하는 설계 문서 인덱스다.
 
-이 문서 세트는 다음 목적을 가진다.
+- 어떤 테스트가 어떤 요구사항을 보장하는지 확인
+- 회귀 테스트 범위와 우선순위 공유
+- QA 문서와 개발 테스트 자산을 연결
+- 결제/인증 고위험 시나리오의 커버리지를 추적
 
-- 자동화 테스트가 무엇을 보장하는지 명확히 설명
-- 코드 리뷰 시 테스트 범위 누락 여부를 빠르게 확인
-- QA와 개발 간 테스트 책임 경계를 정리
-- 회귀 테스트 우선순위를 운영 리스크 기준으로 관리
+## 2. 현재 기준선
 
-## 2. 문서 적용 원칙
-
-- 테스트 클래스 1개당 문서 1개를 작성한다.
-- 문서는 현재 구현된 테스트를 기준으로 작성한다.
-- 구현되지 않은 테스트 아이디어는 본 문서가 아닌 별도 개선 문서에서 관리한다.
-- 각 테스트 케이스는 `ID`, `우선순위`, `유형`, `시나리오`, `기대 결과`를 포함한다.
+| 항목 | 내용 |
+|-----|-----|
+| 기준일 | 2026-03-25 |
+| 기준 명령 | `./gradlew test` |
+| 최근 결과 | 전체 통과 |
+| 테스트 클래스 수 | 14 |
+| 주요 범위 | 인증, 결제 승인, 환불, webhook, 멱등성, 동시성 |
 
 ## 3. 우선순위 기준
 
-| 우선순위 | 의미 | 기준 |
-|-----|-----|-----|
-| P0 | 장애 직결 | 금전, 인증, 중복 처리, 데이터 정합성, 보안 |
-| P1 | 핵심 기능 | 주요 API 성공/실패 흐름, 회귀 영향 큼 |
-| P2 | 보조 기능 | 포맷, 일부 예외 케이스, 운영 편의성 |
+| 우선순위 | 의미 |
+|-----|-----|
+| P0 | 금전, 인증, 보안, 멱등성, 동시성, 정합성 |
+| P1 | 핵심 API 및 서비스 흐름 |
+| P2 | 보조 예외, 운영 편의성, 표현 계층 검증 |
 
 ## 4. 테스트 유형 기준
 
 | 유형 | 설명 |
 |-----|-----|
-| 단위 | 단일 클래스/로직 중심 검증 |
-| API | 컨트롤러 경계, 요청/응답 검증 |
-| 통합 | 저장소, 트랜잭션, 이벤트 포함 검증 |
-| 동시성 | 락, 멱등성, 경쟁 상태 검증 |
-| 보안 | 서명, 토큰, 인증/인가 관련 검증 |
+| API | 컨트롤러 요청/응답, validation, 예외 변환 |
+| 단위 | 단일 클래스 로직 검증 |
+| 통합 | 저장소, 트랜잭션, 이벤트, 직렬화 포함 |
+| 동시성 | 멱등성, 경쟁 상태, 락 검증 |
+| 보안 | 인증, 토큰, 서명 검증 |
 
-## 5. 문서 목록
+## 5. 테스트 인벤토리
 
-### 5.1 인증 및 보안
+| 테스트 클래스 | 유형 | 우선순위 | 핵심 보장 |
+|-----|-----|-----|-----|
+| [`AuthControllerTest.java`](../../src/test/java/com/lessonring/api/auth/api/AuthControllerTest.java) | API | P0 | 로그인/재발급/로그아웃 validation 및 예외 응답 |
+| [`JwtTokenProviderImplTest.java`](../../src/test/java/com/lessonring/api/common/security/JwtTokenProviderImplTest.java) | 보안 | P0 | JWT 생성/검증 안정성 |
+| [`PaymentWebhookSignatureVerifierTest.java`](../../src/test/java/com/lessonring/api/payment/infrastructure/webhook/PaymentWebhookSignatureVerifierTest.java) | 보안 | P0 | webhook 서명 검증 |
+| [`PaymentControllerTest.java`](../../src/test/java/com/lessonring/api/payment/api/PaymentControllerTest.java) | API | P1 | 승인 API 성공/validation |
+| [`PaymentPgServiceTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentPgServiceTest.java) | 단위 | P0 | 승인 성공/실패/상태 전이 |
+| [`PaymentPgServiceIntegrationTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentPgServiceIntegrationTest.java) | 통합 | P0 | 승인 멱등성, operation 기록, 락 실패 처리 |
+| [`PaymentPgServiceConcurrencyTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentPgServiceConcurrencyTest.java) | 동시성 | P0 | 동시 승인 시 1회 처리 보장 |
+| [`PaymentServiceIdempotencyTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentServiceIdempotencyTest.java) | 단위 | P1 | 결제 생성 멱등성 |
+| [`PaymentServiceRefundWithPgTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentServiceRefundWithPgTest.java) | 단위 | P0 | 환불 시 PG 취소 성공/실패 분기 |
+| [`PaymentServiceIntegrationTest.java`](../../src/test/java/com/lessonring/api/common/security/payment/application/PaymentServiceIntegrationTest.java) | 통합 | P0 | 환불 금액, 예약 취소, 이벤트, 멱등성 |
+| [`PaymentWebhookServiceTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentWebhookServiceTest.java) | 단위 | P0 | completed/failed/canceled webhook 반영 |
+| [`PaymentWebhookReplayTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentWebhookReplayTest.java) | 통합 | P0 | transmission 재전송 및 동일 상태 재처리 방지 |
+| [`PaymentCrossConflictConcurrencyTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java) | 동시성 | P0 | approve/refund/webhook 교차 충돌 조정 |
+| [`PaymentCrossConflictSecondPriorityConcurrencyTest.java`](../../src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictSecondPriorityConcurrencyTest.java) | 동시성 | P0 | completed/canceled 우선순위 규칙 검증 |
 
-- [인증 컨트롤러 테스트 설계서](/C:/wms/api/docs/test-cases/auth/api/AuthControllerTest.md)
-- [JWT 토큰 제공자 테스트 설계서](/C:/wms/api/docs/test-cases/common/security/JwtTokenProviderImplTest.md)
-- [웹훅 서명 검증 테스트 설계서](/C:/wms/api/docs/test-cases/payment/infrastructure/webhook/PaymentWebhookSignatureVerifierTest.md)
+## 6. 요구사항 추적 요약
 
-### 5.2 결제 API 및 애플리케이션
+| 요구사항 | 대표 테스트 |
+|-----|-----|
+| 인증 요청 validation 및 토큰 흐름 | `AuthControllerTest`, `JwtTokenProviderImplTest` |
+| 결제 승인 | `PaymentControllerTest`, `PaymentPgServiceTest`, `PaymentPgServiceIntegrationTest` |
+| 결제 멱등성 | `PaymentServiceIdempotencyTest`, `PaymentPgServiceIntegrationTest`, `PaymentPgServiceConcurrencyTest` |
+| 결제 환불 | `PaymentServiceRefundWithPgTest`, `PaymentServiceIntegrationTest` |
+| webhook 처리 | `PaymentWebhookServiceTest`, `PaymentWebhookReplayTest` |
+| 교차 충돌 및 경쟁 상태 | `PaymentPgServiceConcurrencyTest`, `PaymentCrossConflictConcurrencyTest`, `PaymentCrossConflictSecondPriorityConcurrencyTest` |
 
-- [결제 컨트롤러 테스트 설계서](/C:/wms/api/docs/test-cases/payment/api/PaymentControllerTest.md)
-- [결제 승인 서비스 단위 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentPgServiceTest.md)
-- [결제 승인 통합 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentPgServiceIntegrationTest.md)
-- [결제 승인 동시성 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentPgServiceConcurrencyTest.md)
-- [결제 생성 멱등성 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentServiceIdempotencyTest.md)
-- [결제 환불 PG 연동 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentServiceRefundWithPgTest.md)
-- [결제 환불 통합 테스트 설계서](/C:/wms/api/docs/test-cases/common/security/payment/application/PaymentServiceIntegrationTest.md)
-- [결제 웹훅 서비스 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentWebhookServiceTest.md)
-- [결제 웹훅 재전송 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentWebhookReplayTest.md)
-- [결제 교차 충돌 동시성 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentCrossConflictConcurrencyTest.md)
-- [결제 2순위 충돌 동시성 테스트 설계서](/C:/wms/api/docs/test-cases/payment/application/PaymentCrossConflictSecondPriorityConcurrencyTest.md)
+## 7. 현재 설계상 특징
 
-### 5.3 테스트 지원 설정
+- 결제 도메인 테스트 밀도가 가장 높다.
+- 단위, 통합, 동시성 레벨이 분리되어 있다.
+- `payment_operation`, Redis 기반 상태 락, webhook 재전송 정책까지 테스트 범위에 포함된다.
+- webhook `completed`는 내부 이용권 생성까지, `canceled`는 이용권 환불까지 동기화하도록 현재 구현이 반영돼 있다.
 
-- [테스트 외부 연동 목 설정 문서](/C:/wms/api/docs/test-cases/support/TestExternalMockConfig.md)
+## 8. 현재 한계
 
-## 6. 현재 테스트 자산 평가
+- 결제 외 member, booking, attendance, notification 독립 테스트는 부족하다.
+- `@MockBean` 사용 테스트는 경고가 남아 있어 향후 Spring Boot 업그레이드 시 정리가 필요하다.
+- 일부 `skipped` 테스트는 현재 환경 또는 정책 기준으로 실행 제외 상태다.
 
-### 강점
+## 9. 관련 문서
 
-- 결제 도메인의 정합성 검증이 강하다.
-- 승인, 환불, 웹훅, 멱등성, 동시성 시나리오가 분리되어 있다.
-- 단위, API, 통합, 동시성 테스트가 함께 존재한다.
-
-### 약점
-
-- 결제 외 도메인 테스트 자산이 부족하다.
-- 인증 성공 플로우, member, booking, attendance, notification 계열의 독립 테스트가 부족하다.
-- 일부 패키지 경로와 실제 도메인 관심사가 일치하지 않는다.
-
-## 7. 활용 기준
-
-- 개발자는 기능 변경 시 해당 문서의 `합격 기준`을 유지해야 한다.
-- QA는 문서의 상세 케이스를 수동 시나리오와 연결할 수 있다.
-- 리뷰어는 테스트 변경이 `P0` 또는 `P1` 범위를 약화시키는지 확인해야 한다.
+- [`../qa-test-cases/README.md`](../qa-test-cases/README.md)
+- [`../requirements/lessonring-requirements-specification.md`](../requirements/lessonring-requirements-specification.md)
+- [`support/TestExternalMockConfig.md`](support/TestExternalMockConfig.md)

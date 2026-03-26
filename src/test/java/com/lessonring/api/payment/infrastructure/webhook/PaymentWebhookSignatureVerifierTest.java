@@ -52,7 +52,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -66,7 +66,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -80,7 +80,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -94,7 +94,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -109,7 +109,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -125,7 +125,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -141,7 +141,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 
@@ -155,7 +155,7 @@ class PaymentWebhookSignatureVerifierTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> {
                     BusinessException be = (BusinessException) ex;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_WEBHOOK_INVALID_SIGNATURE);
                 });
     }
 

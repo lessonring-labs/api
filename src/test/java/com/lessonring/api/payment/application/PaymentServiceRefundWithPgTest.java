@@ -7,11 +7,17 @@ import com.lessonring.api.membership.domain.MembershipType;
 import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.response.RefundResponse;
 import com.lessonring.api.payment.domain.Payment;
+import com.lessonring.api.payment.domain.PaymentOperation;
+import com.lessonring.api.payment.domain.PaymentOperationStatus;
+import com.lessonring.api.payment.domain.PaymentOperationType;
 import com.lessonring.api.payment.domain.PaymentMethod;
 import com.lessonring.api.payment.domain.PaymentStatus;
 import com.lessonring.api.payment.domain.repository.PaymentRepository;
+import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgCancelResponse;
 import com.lessonring.api.payment.infrastructure.pg.PgClient;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,10 +28,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,8 +54,40 @@ class PaymentServiceRefundWithPgTest {
     @Mock
     private PgClient pgClient;
 
+    @Mock
+    private PaymentOperationService paymentOperationService;
+
+    @Mock
+    private com.lessonring.api.payment.application.support.RequestHashGenerator requestHashGenerator;
+
+    @Mock
+    private com.lessonring.api.common.lock.RedisLockManager redisLockManager;
+
+    @Mock
+    private PaymentStateLockManager paymentStateLockManager;
+
+    @Mock
+    private EntityManager entityManager;
+
     @InjectMocks
     private PaymentService paymentService;
+
+    @BeforeEach
+    void setUp() {
+        given(requestHashGenerator.generateRefundHash(any(), any(), any())).willReturn("refund-hash");
+        given(paymentStateLockManager.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).willReturn(true);
+        given(paymentOperationService.startOrGet(any(), any(), any(), any()))
+                .willAnswer(invocation -> new PaymentOperationStartResult(
+                        PaymentOperation.create(
+                                invocation.getArgument(0),
+                                invocation.getArgument(1, PaymentOperationType.class),
+                                invocation.getArgument(2),
+                                invocation.getArgument(3)
+                        ),
+                        PaymentOperationStatus.PROCESSING,
+                        true
+                ));
+    }
 
     @Test
     @DisplayName("환불 시 PG 취소가 성공하면 내부 환불이 완료된다")
@@ -55,9 +95,9 @@ class PaymentServiceRefundWithPgTest {
         Payment payment = createCompletedPayment();
         Membership membership = createMembership();
 
+        given(bookingRepository.findRefundTargetBookings(any(), any())).willReturn(java.util.List.of());
         given(paymentRepository.findById(1L)).willReturn(Optional.of(payment));
         given(membershipRepository.findById(100L)).willReturn(Optional.of(membership));
-        given(bookingRepository.findRefundTargetBookings(any(), any())).willReturn(java.util.List.of());
         given(pgClient.cancel(any())).willReturn(
                 PgCancelResponse.builder()
                         .provider("TOSS")

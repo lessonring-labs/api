@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [AuthControllerTest.java](/C:/wms/api/src/test/java/com/lessonring/api/auth/api/AuthControllerTest.java) |
+| 대상 파일 | [AuthControllerTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/auth/api/AuthControllerTest.java) |
 | 대상 계층 | 인증 API 컨트롤러 |
 | 테스트 유형 | API |
 | 주 우선순위 | P1 |
@@ -66,3 +66,11 @@
 
 - 성공 시나리오 보장이 없다.
 - 실제 인증 상태 변화나 refresh token lifecycle은 별도 테스트가 필요하다.
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `login_validation_fail_userId_null` | 로그인 요청 시 userId가 없으면 validation 에러가 발생한다 | `AUTH-001` |
+| `refresh_validation_fail_refreshToken_blank` | 토큰 재발급 요청 시 refreshToken이 없으면 validation 에러가 발생한다 | `AUTH-002` |
+| `logout_validation_fail_userId_type_mismatch` | 로그아웃 요청 시 userId path variable 타입이 올바르지 않으면 타입 에러가 발생한다 | `AUTH-003` |

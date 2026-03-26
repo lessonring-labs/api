@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|-----|
-| 대상 파일 | [PaymentCrossConflictConcurrencyTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java) |
+| 대상 파일 | [PaymentCrossConflictConcurrencyTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentCrossConflictConcurrencyTest.java) |
 | 대상 계층 | 승인/환불/웹훅 간 교차 충돌 처리 |
 | 테스트 유형 | 통합 / 동시성 |
 | 주 우선순위 | P0 |
@@ -37,3 +37,10 @@
 - payment 최종 상태
 - webhook 로그 존재 여부
 - PG 호출 횟수
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | 문서 케이스 |
+|-----|-----|-----|
+| `approve_vs_webhook_completed` | approve API 와 webhook completed 동시 진입 시 최종 COMPLETED 1회만 반영된다 | `PAY-CROSS-001` |
+| `refund_vs_webhook_canceled` | refund API 와 webhook canceled 동시 진입 시 최종 CANCELED 1회만 반영된다 | `PAY-CROSS-002` |

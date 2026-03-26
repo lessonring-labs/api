@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 환불 PG 연동 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentServiceRefundWithPgTest.java](/C:/wms/api/src/test/java/com/lessonring/api/payment/application/PaymentServiceRefundWithPgTest.java) |
+| 기준 테스트 파일 | [PaymentServiceRefundWithPgTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/payment/application/PaymentServiceRefundWithPgTest.java) |
 | 모듈 | 결제 환불 |
 | 테스트 유형 | 단위 |
 | 우선순위 | P0 |
@@ -48,3 +48,10 @@
 | 수행일 |  |
 | 수행 버전 |  |
 | 결과 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `refund_with_pg_cancel_success` | 환불 시 PG 취소가 성공하면 내부 환불이 완료된다 | `PAY-REF-PG-QA-001` |
+| `refund_with_pg_cancel_fail` | 환불 시 PG 취소가 실패하면 예외가 발생한다 | `PAY-REF-PG-QA-002` |

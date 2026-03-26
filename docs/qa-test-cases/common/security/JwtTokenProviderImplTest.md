@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | JWT 토큰 제공자 테스트 케이스 |
-| 기준 테스트 파일 | [JwtTokenProviderImplTest.java](/C:/wms/api/src/test/java/com/lessonring/api/common/security/JwtTokenProviderImplTest.java) |
+| 기준 테스트 파일 | [JwtTokenProviderImplTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/common/security/JwtTokenProviderImplTest.java) |
 | 모듈 | 보안 |
 | 테스트 유형 | 단위 / 보안 |
 | 우선순위 | P1 |
@@ -67,3 +67,11 @@
 | 수행 버전 |  |
 | 결과 요약 |  |
 | 비고 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | 설명 | QA 케이스 |
+|-----|-----|-----|
+| `initSupportsRawTextSecret` | 일반 문자열 secret 초기화 지원 | `JWT-QA-001` |
+| `initSupportsBase64Secret` | Base64 secret 초기화 지원 | `JWT-QA-002` |
+| `initSupportsBase64UrlSecret` | Base64 URL secret 초기화 지원 | `JWT-QA-003` |

@@ -1,6 +1,7 @@
 package com.lessonring.api.payment.application;
 
 import com.lessonring.api.common.error.BusinessException;
+import com.lessonring.api.common.error.ErrorCode;
 import com.lessonring.api.common.event.DomainEventPublisher;
 import com.lessonring.api.membership.domain.Membership;
 import com.lessonring.api.membership.domain.MembershipType;
@@ -8,16 +9,23 @@ import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.request.PaymentApproveRequest;
 import com.lessonring.api.payment.api.response.PaymentApproveResponse;
 import com.lessonring.api.payment.domain.Payment;
+import com.lessonring.api.payment.domain.PaymentOperation;
+import com.lessonring.api.payment.domain.PaymentOperationStatus;
+import com.lessonring.api.payment.domain.PaymentOperationType;
 import com.lessonring.api.payment.domain.PaymentMethod;
 import com.lessonring.api.payment.domain.PaymentStatus;
 import com.lessonring.api.payment.domain.repository.PaymentRepository;
+import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgApproveResponse;
 import com.lessonring.api.payment.infrastructure.pg.PgClient;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
@@ -26,6 +34,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,8 +52,33 @@ class PaymentPgServiceTest {
     @Mock
     private DomainEventPublisher domainEventPublisher;
 
+    @Mock
+    private PaymentOperationService paymentOperationService;
+
+    @Mock
+    private ApproveRequestHashGenerator approveRequestHashGenerator;
+
+    @Mock
+    private PaymentStateLockManager paymentStateLockManager;
+
+    @Mock
+    private EntityManager entityManager;
+
     @InjectMocks
     private PaymentPgService paymentPgService;
+
+    @BeforeEach
+    void setUp() {
+        given(approveRequestHashGenerator.generate(anyLong(), any(), any(), any()))
+                .willReturn("approve-hash");
+        given(paymentStateLockManager.tryLock(anyLong())).willReturn(true);
+        given(paymentOperationService.startOrGet(anyLong(), any(PaymentOperationType.class), any(), any()))
+                .willAnswer(invocation -> new PaymentOperationStartResult(
+                        Mockito.mock(PaymentOperation.class),
+                        PaymentOperationStatus.PROCESSING,
+                        true
+                ));
+    }
 
     @Test
     @DisplayName("PG 승인 성공 시 결제가 완료되고 이용권이 생성된다")
@@ -195,7 +229,10 @@ class PaymentPgServiceTest {
         // when & then
         assertThatThrownBy(() -> paymentPgService.approve(1L, request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("READY 상태의 결제만 승인할 수 있습니다.");
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+                });
     }
 
     @Test
@@ -230,7 +267,10 @@ class PaymentPgServiceTest {
         // when & then
         assertThatThrownBy(() -> paymentPgService.approve(1L, request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("READY 상태의 결제만 승인할 수 있습니다.");
+                .satisfies(ex -> {
+                    BusinessException be = (BusinessException) ex;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.PAYMENT_APPROVE_ALREADY_COMPLETED);
+                });
     }
 
     @Test

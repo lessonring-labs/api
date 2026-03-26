@@ -8,6 +8,8 @@ import static org.mockito.BDDMockito.given;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lessonring.api.common.error.BusinessException;
 import com.lessonring.api.membership.domain.MembershipType;
+import com.lessonring.api.membership.domain.Membership;
+import com.lessonring.api.membership.domain.repository.MembershipRepository;
 import com.lessonring.api.payment.api.request.PaymentWebhookRequest;
 import com.lessonring.api.payment.domain.Payment;
 import com.lessonring.api.payment.domain.PaymentMethod;
@@ -17,6 +19,7 @@ import com.lessonring.api.payment.domain.repository.PaymentRepository;
 import com.lessonring.api.payment.domain.repository.PaymentWebhookLogRepository;
 import com.lessonring.api.payment.infrastructure.lock.PaymentStateLockManager;
 import com.lessonring.api.payment.infrastructure.pg.PgPaymentStatusResponse;
+import jakarta.persistence.EntityManager;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -41,10 +44,16 @@ class PaymentWebhookServiceTest {
     private PaymentStateLockManager paymentStateLockManager;
 
     @Mock
+    private MembershipRepository membershipRepository;
+
+    @Mock
     private PaymentWebhookPgVerificationService paymentWebhookPgVerificationService;
 
     @Mock
     private ObjectMapper objectMapper;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private PaymentWebhookService paymentWebhookService;
@@ -65,6 +74,12 @@ class PaymentWebhookServiceTest {
         );
 
         stubCommonFlow(payment);
+        given(membershipRepository.save(any(Membership.class)))
+                .willAnswer(invocation -> {
+                    Membership membership = invocation.getArgument(0);
+                    setField(membership, "id", 999L);
+                    return membership;
+                });
         given(paymentWebhookPgVerificationService.verifyCompleted(payment, request))
                 .willReturn(pgResponse("paymentKey_123", "ORDER_123", 100_000L, "DONE", "{\"status\":\"DONE\"}"));
         given(objectMapper.writeValueAsString(any()))
@@ -75,6 +90,7 @@ class PaymentWebhookServiceTest {
         paymentWebhookService.handle(null, null, null, request);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        assertThat(payment.getMembershipId()).isEqualTo(999L);
         assertThat(payment.getPgPaymentKey()).isEqualTo("paymentKey_123");
         assertThat(payment.getPgRawResponse()).isEqualTo("{\"status\":\"DONE\"}");
         assertThat(payment.getPaidAt()).isNotNull();
@@ -182,13 +198,6 @@ class PaymentWebhookServiceTest {
         );
 
         stubCommonFlow(payment);
-        given(paymentWebhookPgVerificationService.verifyCompleted(payment, request))
-                .willReturn(pgResponse("paymentKey_123", "ORDER_123", 100_000L, "DONE", "{\"status\":\"DONE_AGAIN\"}"));
-        given(objectMapper.writeValueAsString(any()))
-                .willReturn("{\"eventType\":\"PAYMENT_COMPLETED\"}");
-        given(paymentWebhookLogRepository.save(any()))
-                .willAnswer(invocation -> invocation.getArgument(0));
-
         paymentWebhookService.handle(null, null, null, request);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
@@ -212,13 +221,6 @@ class PaymentWebhookServiceTest {
         );
 
         stubCommonFlow(payment);
-        given(paymentWebhookPgVerificationService.verifyCanceled(payment, request))
-                .willReturn(pgResponse("paymentKey_cancel", "ORDER_CANCEL", 100_000L, "CANCELED", "{\"status\":\"CANCELED_AGAIN\"}"));
-        given(objectMapper.writeValueAsString(any()))
-                .willReturn("{\"eventType\":\"PAYMENT_CANCELED\"}");
-        given(paymentWebhookLogRepository.save(any()))
-                .willAnswer(invocation -> invocation.getArgument(0));
-
         paymentWebhookService.handle(null, null, null, request);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
@@ -242,13 +244,6 @@ class PaymentWebhookServiceTest {
         );
 
         stubCommonFlow(payment);
-        given(paymentWebhookPgVerificationService.verifyFailed(payment, request))
-                .willReturn(pgResponse("paymentKey_fail", "ORDER_FAIL", 100_000L, "FAILED", "{\"code\":\"FAILED_AGAIN\"}"));
-        given(objectMapper.writeValueAsString(any()))
-                .willReturn("{\"eventType\":\"PAYMENT_FAILED\"}");
-        given(paymentWebhookLogRepository.save(any()))
-                .willAnswer(invocation -> invocation.getArgument(0));
-
         paymentWebhookService.handle(null, null, null, request);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
@@ -283,8 +278,6 @@ class PaymentWebhookServiceTest {
 
     private void stubCommonFlow(Payment payment) {
         given(paymentRepository.findByPgOrderId(payment.getPgOrderId()))
-                .willReturn(Optional.of(payment));
-        given(paymentRepository.findById(payment.getId()))
                 .willReturn(Optional.of(payment));
         given(paymentStateLockManager.tryLock(payment.getId(), 3L, TimeUnit.SECONDS))
                 .willReturn(true);

@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|-----|
 | 문서명 | 결제 환불 통합 테스트 케이스 |
-| 기준 테스트 파일 | [PaymentServiceIntegrationTest.java](/C:/wms/api/src/test/java/com/lessonring/api/common/security/payment/application/PaymentServiceIntegrationTest.java) |
+| 기준 테스트 파일 | [PaymentServiceIntegrationTest.java](/Users/devyn/IdeaProjects/lessonring-labs/api/src/test/java/com/lessonring/api/common/security/payment/application/PaymentServiceIntegrationTest.java) |
 | 모듈 | 결제 / 환불 |
 | 테스트 유형 | 통합 / 동시성 |
 | 우선순위 | P0 |
@@ -165,3 +165,19 @@
 | 환경 |  |
 | 결과 요약 |  |
 | 결함 요약 |  |
+
+## 현재 테스트 메서드 기준
+
+| 메서드 | DisplayName | QA 케이스 |
+|-----|-----|-----|
+| `refund_fails_when_payment_is_not_completed` | COMPLETED 상태가 아닌 결제는 환불할 수 없다 | `PAY-REF-QA-001` |
+| `refund_fails_when_membership_already_refunded` | 이미 환불된 이용권이 연결된 결제는 다시 환불할 수 없다 | `PAY-REF-QA-002` |
+| `refund_concurrent_with_different_keys_only_one_succeeds` | 동일 paymentId에 대해 서로 다른 idempotencyKey로 동시에 refund 요청하면 1건만 성공한다 | `PAY-REF-QA-003` |
+| `refund_concurrent_with_same_key_is_processed_once` | 동일 paymentId에 대해 동일 idempotencyKey로 동시에 refund 요청하면 1건만 실제 처리된다 | `PAY-REF-QA-004` |
+| `refund_success` | 완료된 결제를 환불하면 결제는 취소되고 이용권은 환불 상태가 되며 미래 예약은 취소된다 | `PAY-REF-QA-005` |
+| `count_refund_amount_is_calculated_correctly` | COUNT 이용권 환불 금액 계산이 정확해야 한다 | `PAY-REF-QA-006` |
+| `period_refund_amount_is_calculated_correctly` | PERIOD 이용권 환불 금액 계산이 정확해야 한다 | `PAY-REF-QA-007` |
+| `future_reserved_bookings_are_canceled_but_attended_kept` | 환불 시 미래 RESERVED 예약은 자동 취소되고 과거 ATTENDED 예약은 유지된다 | `PAY-REF-QA-008` |
+| `payment_canceled_event_is_published_and_notification_created` | 환불 시 PaymentCanceledEvent가 발행되어 환불 완료 알림이 생성된다 | `PAY-REF-QA-009` |
+| `refund_fails_when_count_membership_has_no_remaining_count` | 잔여 횟수가 없는 COUNT 이용권은 환불할 수 없다 | `PAY-REF-QA-010` |
+| `refund_fails_when_period_membership_is_expired` | 만료된 PERIOD 이용권은 환불할 수 없다 | `PAY-REF-QA-011` |
