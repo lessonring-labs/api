@@ -46,6 +46,7 @@ docs/architecture
 - security-architecture.md
 - domain-architecture.md
 - event-architecture.md
+- adr.md
 
 설명
 
@@ -71,6 +72,7 @@ docs/api
 문서
 
 - api-guidelines.md
+- analytics-api-spec.md
 
 포함 내용
 
@@ -136,6 +138,13 @@ docs/development
 - coding-rules.md
 - module-dependency-rules.md
 - package-structure.md
+- analytics-plan.md
+- analytics-kpi-sql-draft.md
+- backlog-refinement.md
+- dev-conventions-and-guide.md
+- logging-standard.md
+- sprint-archive.md
+- team-and-roles.md
 - transaction-strategy.md
 
 설명
@@ -256,11 +265,13 @@ Architecture
 - docs/architecture/security-architecture.md
 - docs/architecture/domain-architecture.md
 - docs/architecture/event-architecture.md
+- docs/architecture/adr.md
 - docs/architecture/technology-stack.md
 
 API
 
 - docs/api/api-guidelines.md
+- docs/api/analytics-api-spec.md
 
 Development
 
@@ -269,6 +280,13 @@ Development
 - docs/development/package-structure.md
 - docs/development/module-dependency-rules.md
 - docs/development/transaction-strategy.md
+- docs/development/analytics-plan.md
+- docs/development/analytics-kpi-sql-draft.md
+- docs/development/backlog-refinement.md
+- docs/development/dev-conventions-and-guide.md
+- docs/development/logging-standard.md
+- docs/development/sprint-archive.md
+- docs/development/team-and-roles.md
 - docs/development/payment-entity-refactoring-plan.md
 - docs/development/entity-refactoring-guidelines.md
 - docs/development/internationalization-design.md
