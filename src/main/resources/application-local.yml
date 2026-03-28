@@ -6,7 +6,7 @@ spring:
       on-profile: local
 
   datasource:
-    url: jdbc:postgresql://43.201.114.149:5432/lessonring
+    url: jdbc:postgresql://52.78.195.123:5432/api
     username: lessonring
     password: lessonring
     driver-class-name: org.postgresql.Driver
@@ -14,10 +14,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
-    show-sql: true
 
   data:
     redis:
