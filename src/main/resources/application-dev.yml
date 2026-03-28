@@ -7,9 +7,9 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/lessonring}
-    username: ${DB_USERNAME:devyn}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/lessonring}
+    username: ${DB_USERNAME:lessonring}
+    password: ${DB_PASSWORD:lessonring}
 
   jpa:
     show-sql: false
